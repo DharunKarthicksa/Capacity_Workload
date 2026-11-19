@@ -20,3 +20,15 @@
     | where Hour > ago(lookback)
     | project CapacityId, WorkspaceId, Hour, CuSeconds, Operations, CuPeak = PeakOpCu, CuP95 = percentile_tdigest(Digest, 95)
 }
+
+// Hourly roll-up of the 30-second summaries, for time ranges longer than 24 hours (7 and 14 days in the app).
+.create-or-alter materialized-view CapacityHourly on table CapacitySummary {
+    CapacitySummary
+    | summarize CuAvg = avg(CuPercent), CuMax = max(CuPercent),
+        InteractiveAvg = avg(InteractivePercent), BackgroundAvg = avg(BackgroundPercent),
+        DelayWindowMax = max(InteractiveDelayThresholdPercent),
+        RejectionWindowMax = max(InteractiveRejectionThresholdPercent),
+        BackgroundRejectionWindowMax = max(BackgroundRejectionThresholdPercent),
+        AnomalyMax = max(AnomalyScore), Samples = count()
+        by CapacityId, Hour = bin(Timestamp, 1h)
+}

@@ -40,7 +40,9 @@
     WindowSeconds: real,
     OverageCuMs: real,
     InteractiveDelayThresholdPercent: real,
-    Breakdown: dynamic
+    Breakdown: dynamic,
+    InteractiveRejectionThresholdPercent: real,
+    BackgroundRejectionThresholdPercent: real
 )
 
 .create-merge table CapacityState (

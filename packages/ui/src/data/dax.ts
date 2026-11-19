@@ -18,6 +18,8 @@ export type DaxRow = Record<string, unknown>;
 export type DaxExecutor = (dax: string) => Promise<DaxRow[]>;
 
 export const ANOMALY_THRESHOLD = 3;
+/** Ranges longer than this are served as hourly points instead of 30-second points. */
+export const HOURLY_ABOVE_MS = 26 * 3_600_000;
 
 /** Strip Table[Column] or [Name] down to the bracketed name. */
 export function bareName(column: string): string {
@@ -91,23 +93,48 @@ export function createDaxDataSource(run: DaxExecutor): CapacityDataSource {
         interactivePercent: num(r.InteractivePercent),
         backgroundPercent: num(r.BackgroundPercent),
         interactiveDelayThresholdPercent: num(r.InteractiveDelayThresholdPercent),
+        interactiveRejectionThresholdPercent: optNum(r.InteractiveRejectionThresholdPercent),
+        backgroundRejectionThresholdPercent: optNum(r.BackgroundRejectionThresholdPercent),
         throttling: throttlingFrom(num(r.OverageCuMs)),
       };
     },
 
     async getSeries(capacityId: string, range: TimeRange): Promise<SeriesPoint[]> {
       const id = guid(capacityId);
+      const spanMs = new Date(range.to).getTime() - new Date(range.from).getTime();
+      if (spanMs > HOURLY_ABOVE_MS) {
+        // Long ranges read the hourly materialized view (CapacityHourly) instead of 30-second rows.
+        const hourly = await run(
+          `EVALUATE SELECTCOLUMNS(
+             FILTER(CapacityHourly, CapacityHourly[CapacityId] = "${id}" && CapacityHourly[Hour] >= ${dateLiteral(range.from)} && CapacityHourly[Hour] <= ${dateLiteral(range.to)}),
+             "Timestamp", CapacityHourly[Hour], "CuPercent", CapacityHourly[CuAvg], "CuMax", CapacityHourly[CuMax],
+             "InteractivePercent", CapacityHourly[InteractiveAvg], "BackgroundPercent", CapacityHourly[BackgroundAvg],
+             "AnomalyScore", CapacityHourly[AnomalyMax], "DelayWindow", CapacityHourly[DelayWindowMax],
+             "RejectionWindow", CapacityHourly[RejectionWindowMax], "BackgroundRejectionWindow", CapacityHourly[BackgroundRejectionWindowMax])
+           ORDER BY [Timestamp] ASC`,
+        );
+        return hourly.map((r) => ({
+          timestamp: iso(r.Timestamp), cuPercent: num(r.CuPercent), cuMaxPercent: optNum(r.CuMax),
+          interactivePercent: num(r.InteractivePercent), backgroundPercent: num(r.BackgroundPercent), anomalyScore: optNum(r.AnomalyScore),
+          delayWindowPercent: optNum(r.DelayWindow), rejectionWindowPercent: optNum(r.RejectionWindow),
+          backgroundRejectionWindowPercent: optNum(r.BackgroundRejectionWindow),
+        }));
+      }
       const rows = await run(
         `EVALUATE SELECTCOLUMNS(
            FILTER(CapacitySummary, CapacitySummary[CapacityId] = "${id}" && CapacitySummary[Timestamp] >= ${dateLiteral(range.from)} && CapacitySummary[Timestamp] <= ${dateLiteral(range.to)}),
            "Timestamp", CapacitySummary[Timestamp], "CuPercent", CapacitySummary[CuPercent],
            "InteractivePercent", CapacitySummary[InteractivePercent], "BackgroundPercent", CapacitySummary[BackgroundPercent],
-           "AnomalyScore", CapacitySummary[AnomalyScore])
+           "AnomalyScore", CapacitySummary[AnomalyScore], "DelayWindow", CapacitySummary[InteractiveDelayThresholdPercent],
+           "RejectionWindow", CapacitySummary[InteractiveRejectionThresholdPercent],
+           "BackgroundRejectionWindow", CapacitySummary[BackgroundRejectionThresholdPercent])
          ORDER BY [Timestamp] ASC`,
       );
       return rows.map((r) => ({
         timestamp: iso(r.Timestamp), cuPercent: num(r.CuPercent), interactivePercent: num(r.InteractivePercent),
         backgroundPercent: num(r.BackgroundPercent), anomalyScore: optNum(r.AnomalyScore),
+        delayWindowPercent: optNum(r.DelayWindow), rejectionWindowPercent: optNum(r.RejectionWindow),
+        backgroundRejectionWindowPercent: optNum(r.BackgroundRejectionWindow),
       }));
     },
 
@@ -138,12 +165,16 @@ export function createDaxDataSource(run: DaxExecutor): CapacityDataSource {
         `EVALUATE VAR latest = MAX(BpaFindings[ScannedAt])
          RETURN SELECTCOLUMNS(FILTER(BpaFindings, BpaFindings[ScannedAt] = latest),
            "ScannedAt", BpaFindings[ScannedAt], "WorkspaceId", BpaFindings[WorkspaceId], "ModelId", BpaFindings[ModelId],
-           "Rule", BpaFindings[Rule], "Category", BpaFindings[Category], "Severity", BpaFindings[Severity])`,
+           "Rule", BpaFindings[Rule], "Category", BpaFindings[Category], "Severity", BpaFindings[Severity],
+           "ModelName", BpaFindings[ModelName], "WorkspaceName", BpaFindings[WorkspaceName], "Description", BpaFindings[Description])`,
       );
       return rows.map((r) => ({
         modelId: String(r.ModelId), workspaceId: String(r.WorkspaceId), rule: String(r.Rule), category: String(r.Category),
         severity: (["Info", "Warning", "Error"].includes(String(r.Severity)) ? r.Severity : "Info") as BpaSeverity,
         scannedAt: iso(r.ScannedAt),
+        modelName: r.ModelName ? String(r.ModelName) : undefined,
+        workspaceName: r.WorkspaceName ? String(r.WorkspaceName) : undefined,
+        description: r.Description ? String(r.Description) : undefined,
       }));
     },
   };

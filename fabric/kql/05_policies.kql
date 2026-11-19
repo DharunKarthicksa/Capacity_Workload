@@ -13,3 +13,4 @@
 
 .alter materialized-view CuByWorkspace5m policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
 .alter materialized-view CuByWorkspaceHourly policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter materialized-view CapacityHourly policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'

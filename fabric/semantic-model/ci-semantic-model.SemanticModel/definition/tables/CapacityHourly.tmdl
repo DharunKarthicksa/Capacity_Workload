@@ -1,0 +1,64 @@
+table CapacityHourly
+
+	column CapacityId
+		dataType: string
+		sourceColumn: CapacityId
+		summarizeBy: none
+
+	column Hour
+		dataType: dateTime
+		sourceColumn: Hour
+		summarizeBy: none
+
+	column CuAvg
+		dataType: double
+		sourceColumn: CuAvg
+		summarizeBy: sum
+
+	column CuMax
+		dataType: double
+		sourceColumn: CuMax
+		summarizeBy: sum
+
+	column InteractiveAvg
+		dataType: double
+		sourceColumn: InteractiveAvg
+		summarizeBy: sum
+
+	column BackgroundAvg
+		dataType: double
+		sourceColumn: BackgroundAvg
+		summarizeBy: sum
+
+	column DelayWindowMax
+		dataType: double
+		sourceColumn: DelayWindowMax
+		summarizeBy: sum
+
+	column RejectionWindowMax
+		dataType: double
+		sourceColumn: RejectionWindowMax
+		summarizeBy: sum
+
+	column BackgroundRejectionWindowMax
+		dataType: double
+		sourceColumn: BackgroundRejectionWindowMax
+		summarizeBy: sum
+
+	column AnomalyMax
+		dataType: double
+		sourceColumn: AnomalyMax
+		summarizeBy: sum
+
+	column Samples
+		dataType: int64
+		sourceColumn: Samples
+		summarizeBy: sum
+
+	partition CapacityHourly = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "CapacityHourly", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

@@ -24,17 +24,29 @@ export interface LiveSummary {
   cuPercent: number;
   interactivePercent: number;
   backgroundPercent: number;
+  /** How full the 10-minute window is. Interactive jobs are delayed at 100. */
   interactiveDelayThresholdPercent: number;
+  /** How full the 60-minute window is. Interactive jobs are rejected at 100. */
+  interactiveRejectionThresholdPercent?: number;
+  /** How full the 24-hour window is. All jobs are rejected at 100. */
+  backgroundRejectionThresholdPercent?: number;
   throttling: ThrottlingState;
 }
 
 export interface SeriesPoint {
   timestamp: ISOTimestamp;
+  /** CU %. For hourly points this is the hour's average. */
   cuPercent: number;
+  /** Highest 30-second CU % in the hour. Only set on hourly points. */
+  cuMaxPercent?: number;
   interactivePercent: number;
   backgroundPercent: number;
   anomalyScore?: number;
+  delayWindowPercent?: number;
+  rejectionWindowPercent?: number;
+  backgroundRejectionWindowPercent?: number;
 }
+
 
 export interface TimeRange {
   from: ISOTimestamp;
@@ -68,6 +80,10 @@ export interface BpaFinding {
   category: string;
   severity: BpaSeverity;
   scannedAt: ISOTimestamp;
+  modelName?: string;
+  workspaceName?: string;
+  /** Object and rule description, as written by the scan. */
+  description?: string;
 }
 
 export interface CapacityDataSource {

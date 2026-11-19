@@ -75,6 +75,16 @@ table CapacitySummary
 		sourceColumn: InteractiveDelayThresholdPercent
 		summarizeBy: sum
 
+	column InteractiveRejectionThresholdPercent
+		dataType: double
+		sourceColumn: InteractiveRejectionThresholdPercent
+		summarizeBy: sum
+
+	column BackgroundRejectionThresholdPercent
+		dataType: double
+		sourceColumn: BackgroundRejectionThresholdPercent
+		summarizeBy: sum
+
 	partition CapacitySummary = m
 		mode: directQuery
 		source =

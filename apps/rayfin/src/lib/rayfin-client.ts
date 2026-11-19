@@ -7,7 +7,7 @@
 
 import { ConnectorsRayfinClient } from "@microsoft/rayfin-client";
 import type { EntitySchema } from "@microsoft/rayfin-data";
-import type { FunctionsSchema } from "@microsoft/rayfin-functions";
+import type { AppFunctionsSchema } from "../../rayfin/functions/src/types";
 import type { AppConnectorsSchema } from "@/lib/connectors";
 import { connectorConfigs, connectorRuntimes } from "@/lib/connectors";
 
@@ -18,7 +18,7 @@ import { connectorConfigs, connectorRuntimes } from "@/lib/connectors";
  */
 export type AppRayfinClient = ConnectorsRayfinClient<
     EntitySchema,
-    FunctionsSchema,
+    AppFunctionsSchema,
     AppConnectorsSchema
 >;
 
