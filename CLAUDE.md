@@ -12,8 +12,8 @@ A Fabric App cannot be listed on the Workload Hub, which is why there are two sh
 
 ## Target environment
 
-- Build location: folder `CapInsights-Dev` inside the **SE&I Customer Demos Workspace**, workspace ID `415f790e-a590-4b59-b30a-c3a70a48de1e`.
-- The folder's API ID is resolved in task 1.5 and recorded in `docs/environment.md`. The portal `subfolderId=186182` may not be the API ID.
+- Build location: folder `Capacity Workload` (the plan calls it `CapInsights-Dev`) inside the **SE&I Customer Demos Workspace**, workspace ID `415f790e-a590-4b59-b30a-c3a70a48de1e`.
+- Folder API ID: `b556fb13-1994-4e86-9efc-8039e4b6ed11`. When creating items via REST, pass it as `folderId`. Details in `docs/environment.md`.
 - Every item we create is prefixed `ci-`.
 
 ## Rules

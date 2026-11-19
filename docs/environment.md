@@ -4,13 +4,19 @@
 
 - Workspace ID: `415f790e-a590-4b59-b30a-c3a70a48de1e`
 - Portal link: https://app.fabric.microsoft.com/groups/415f790e-a590-4b59-b30a-c3a70a48de1e/list?experience=fabric-developer&subfolderId=186182
-- Hosting capacity: _to be recorded (task 1.5). Flag it if it is a capacity we monitor._
+- Name: `SE&I Customer Demos Workspace`
+- Hosting capacity ID: `ce66fcc6-91b8-4a05-ac16-600a739d7b74`. It does **not** appear in `fab api capacities` for the signed-in identity, so its name, SKU and region are unknown. It is not one of the capacities we monitor (those do not exist yet). Re-check when `cap-monitor`, `cap-target-a` and `cap-target-b` are provisioned.
 
-## Folder `CapInsights-Dev`
+## Folder `CapInsights-Dev` (plan alias)
 
-- Name: _to be confirmed_
-- API folder ID: _to be resolved via `fab api workspaces/415f790e-a590-4b59-b30a-c3a70a48de1e/folders` (portal `subfolderId=186182` may differ)_
+The plan's `CapInsights-Dev` is the existing top-level folder **`Capacity Workload`** (confirmed with the user on 2026-11-19; no folder with the plan's name exists).
+
+- Name: `Capacity Workload`
+- API folder ID: `b556fb13-1994-4e86-9efc-8039e4b6ed11` (parent: none, top level)
+- Contents on 2026-11-19: empty
 - Item prefix: `ci-`
+- Resolved with `fab api workspaces/415f790e-a590-4b59-b30a-c3a70a48de1e/folders`. When creating via REST, pass `folderId: b556fb13-1994-4e86-9efc-8039e4b6ed11`.
+- Other folders in this workspace (for example `Capacity monitoring`, `Capacity watchdog app`) belong to other work. Never touch them.
 
 ## Capacities
 
