@@ -30,7 +30,7 @@ Source: `Capacity Insights · 5-phase delivery plan.md`, Phase 1. Tick items her
 - [ ] Confirm your role and Claude Code's identity on the SE&I workspace are Member or Admin.
 - [ ] Confirm **App** appears under New item in that workspace.
 - [ ] Tell other workspace users that `ci-` prefixed items are under active development.
-- [ ] Create the `CapInsights-Dev` folder in the SE&I workspace if it does not exist yet (tell Claude Code its name if different).
+- [x] `CapInsights-Dev` folder: the existing `Capacity Workload` folder is used.
 
 ### Repo (1.6)
 - [ ] Decide GitHub org, repo name and visibility. Current remote: `DharunKarthicksa/Capacity_Workload`.
@@ -40,8 +40,8 @@ Source: `Capacity Insights · 5-phase delivery plan.md`, Phase 1. Tick items her
 - [x] Local repo initialised, `origin` set, layout from Appendix A, `CLAUDE.md` with Appendix B rules, `docs/` stubs.
 - [x] Tooling versions recorded in `docs/tooling.md`.
 - [ ] 1.4 Install `gh` (needs your approval), smoke test `fab ls` and `fab api capacities`.
-- [ ] 1.5 Resolve the `CapInsights-Dev` folder ID through the API and record it in `docs/environment.md`.
-- [ ] 1.5 Record which capacity the SE&I workspace sits on; flag it if it is one we monitor.
+- [x] 1.5 Resolve the `CapInsights-Dev` folder ID through the API and record it in `docs/environment.md` (folder `Capacity Workload`, `b556fb13-1994-4e86-9efc-8039e4b6ed11`).
+- [x] 1.5 Record which capacity the SE&I workspace sits on (`ce66fcc6-91b8-4a05-ac16-600a739d7b74`, not visible to our identity; re-check once the monitored capacities exist).
 - [ ] 1.5 Create `RB-Test-A` and `RB-Test-B` workspaces (after capacities exist).
 - [ ] 1.6 Create GitHub issues (one per plan task), labels `phase-1` to `phase-5`, `ui-fix`, `you`, `blocked`.
 - [ ] 1.6 Add the two architecture SVGs under `docs/architecture/` (the plan's embedded visuals are not in the markdown file; supply them or ask Claude Code to redraw).
