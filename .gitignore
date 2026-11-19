@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.rayfin/
+*.nupkg
+.env
+.env.*
+*.pem
+*.pfx
+*.log
+.DS_Store
+Thumbs.db
+.venv/
+__pycache__/
+.ipynb_checkpoints/
