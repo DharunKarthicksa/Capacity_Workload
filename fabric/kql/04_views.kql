@@ -1,0 +1,22 @@
+// 04_views.kql - materialized views over CapacityOperation (CU by workspace).
+//
+// Materialized views cannot compute percentile() directly, so the hourly view stores a t-digest
+// and fn_WorkspaceHourly() computes p95 at query time.
+
+.create-or-alter materialized-view CuByWorkspace5m on table CapacityOperation {
+    CapacityOperation
+    | summarize CuSeconds = sum(CuSeconds), Operations = count(), PeakOpCu = max(CuSeconds)
+        by CapacityId, WorkspaceId, Bin = bin(Timestamp, 5m)
+}
+
+.create-or-alter materialized-view CuByWorkspaceHourly on table CapacityOperation {
+    CapacityOperation
+    | summarize CuSeconds = sum(CuSeconds), Operations = count(), PeakOpCu = max(CuSeconds), Digest = tdigest(CuSeconds)
+        by CapacityId, WorkspaceId, Hour = bin(Timestamp, 1h)
+}
+
+.create-or-alter function with (docstring = 'Hourly CU per workspace with p95 and peak', folder = 'analysis') fn_WorkspaceHourly(lookback: timespan = 7d) {
+    CuByWorkspaceHourly
+    | where Hour > ago(lookback)
+    | project CapacityId, WorkspaceId, Hour, CuSeconds, Operations, CuPeak = PeakOpCu, CuP95 = percentile_tdigest(Digest, 95)
+}

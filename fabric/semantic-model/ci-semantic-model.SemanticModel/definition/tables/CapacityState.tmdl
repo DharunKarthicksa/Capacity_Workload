@@ -1,0 +1,44 @@
+table CapacityState
+
+	column Timestamp
+		dataType: dateTime
+		sourceColumn: Timestamp
+		summarizeBy: none
+
+	column CapacityId
+		dataType: string
+		sourceColumn: CapacityId
+		summarizeBy: none
+
+	column CapacityName
+		dataType: string
+		sourceColumn: CapacityName
+		summarizeBy: none
+
+	column State
+		dataType: string
+		sourceColumn: State
+		summarizeBy: none
+
+	column InteractiveDelayThresholdPercent
+		dataType: double
+		sourceColumn: InteractiveDelayThresholdPercent
+		summarizeBy: sum
+
+	column InteractiveRejectThresholdPercent
+		dataType: double
+		sourceColumn: InteractiveRejectThresholdPercent
+		summarizeBy: sum
+
+	column BackgroundRejectThresholdPercent
+		dataType: double
+		sourceColumn: BackgroundRejectThresholdPercent
+		summarizeBy: sum
+
+	partition CapacityState = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "CapacityState", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

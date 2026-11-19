@@ -1,0 +1,27 @@
+// 03_anomaly.kql - anomaly scoring.
+//
+// 1) Ingest-time: each Summary row is scored as a z-score against AnomalyBaseline for the same
+//    capacity and hour of week. No baseline row (or a flat baseline) leaves AnomalyScore null.
+// 2) Query-time: fn_anomaly_scan() uses series_decompose_anomalies for the deeper view.
+
+.create-or-alter function with (docstring = 'Summary rows with z-score against the hour-of-week baseline', folder = 'ingest') fn_ParseSummaryScored() {
+    fn_ParseSummary()
+    | extend HourOfWeek = toint(dayofweek(Timestamp) / 1d) * 24 + hourofday(Timestamp)
+    | join kind = leftouter (AnomalyBaseline | project CapacityId, HourOfWeek, Mean, Std) on CapacityId, HourOfWeek
+    | extend AnomalyScore = iff(isnull(Std) or Std < 0.5, real(null), (CuPercent - Mean) / Std)
+    | project Timestamp, CapacityId, CapacityName, CuPercent, InteractivePercent, BackgroundPercent, AnomalyScore, Raw,
+        Sku, Region, BaseCapacityUnits, WindowSeconds, OverageCuMs, InteractiveDelayThresholdPercent, Breakdown
+}
+
+.alter table CapacitySummary policy update
+@'[{"IsEnabled": true, "Source": "RawCapacityEvents", "Query": "fn_ParseSummaryScored()", "IsTransactional": false, "PropagateIngestionProperties": false}]'
+
+.create-or-alter function with (docstring = 'Deeper anomaly scan with seasonal decomposition', folder = 'analysis') fn_anomaly_scan(lookback: timespan = 7d, threshold: real = 3.0) {
+    CapacitySummary
+    | where Timestamp > ago(lookback)
+    | make-series Cu = avg(CuPercent) default = 0 on Timestamp from ago(lookback) to now() step 5m by CapacityId
+    | extend (Flag, Score, Baseline) = series_decompose_anomalies(Cu, threshold, -1, 'linefit')
+    | mv-expand Timestamp to typeof(datetime), Cu to typeof(real), Flag to typeof(int), Score to typeof(real), Baseline to typeof(real)
+    | where Flag != 0
+    | project Timestamp, CapacityId, CuPercent = Cu, Score, Baseline, Direction = iff(Flag > 0, 'spike', 'dip')
+}

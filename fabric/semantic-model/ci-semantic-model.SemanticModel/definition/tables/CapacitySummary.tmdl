@@ -1,0 +1,84 @@
+table CapacitySummary
+	measure 'Latest CU %' = VAR t = MAX(CapacitySummary[Timestamp]) RETURN CALCULATE(MAX(CapacitySummary[CuPercent]), CapacitySummary[Timestamp] = t)
+		formatString: 0.00
+	measure 'Avg CU %' = AVERAGE(CapacitySummary[CuPercent])
+		formatString: 0.00
+	measure 'Peak CU %' = MAX(CapacitySummary[CuPercent])
+		formatString: 0.00
+	measure 'Max Anomaly Score' = MAX(CapacitySummary[AnomalyScore])
+		formatString: 0.00
+	measure 'Anomaly Count' = COUNTROWS(FILTER(CapacitySummary, CapacitySummary[AnomalyScore] > 3))
+		formatString: 0
+
+	column Timestamp
+		dataType: dateTime
+		sourceColumn: Timestamp
+		summarizeBy: none
+
+	column CapacityId
+		dataType: string
+		sourceColumn: CapacityId
+		summarizeBy: none
+
+	column CapacityName
+		dataType: string
+		sourceColumn: CapacityName
+		summarizeBy: none
+
+	column CuPercent
+		dataType: double
+		sourceColumn: CuPercent
+		summarizeBy: sum
+
+	column InteractivePercent
+		dataType: double
+		sourceColumn: InteractivePercent
+		summarizeBy: sum
+
+	column BackgroundPercent
+		dataType: double
+		sourceColumn: BackgroundPercent
+		summarizeBy: sum
+
+	column AnomalyScore
+		dataType: double
+		sourceColumn: AnomalyScore
+		summarizeBy: sum
+
+	column Sku
+		dataType: string
+		sourceColumn: Sku
+		summarizeBy: none
+
+	column Region
+		dataType: string
+		sourceColumn: Region
+		summarizeBy: none
+
+	column BaseCapacityUnits
+		dataType: double
+		sourceColumn: BaseCapacityUnits
+		summarizeBy: sum
+
+	column WindowSeconds
+		dataType: double
+		sourceColumn: WindowSeconds
+		summarizeBy: sum
+
+	column OverageCuMs
+		dataType: double
+		sourceColumn: OverageCuMs
+		summarizeBy: sum
+
+	column InteractiveDelayThresholdPercent
+		dataType: double
+		sourceColumn: InteractiveDelayThresholdPercent
+		summarizeBy: sum
+
+	partition CapacitySummary = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "CapacitySummary", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

@@ -1,0 +1,15 @@
+// 05_policies.kql - retention: 30 days on raw, 400 days on typed tables and views.
+// Database-definition scripts only allow `.alter table ... policy retention` and
+// `.alter materialized-view`, and the short `softdelete = 30d` form is rejected, so use JSON.
+// Both are idempotent. 30d = 30.00:00:00, 400d = 400.00:00:00.
+
+.alter table RawCapacityEvents policy retention @'{"SoftDeletePeriod": "30.00:00:00", "Recoverability": "Disabled"}'
+
+.alter table CapacitySummary policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter table CapacityState policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter table CapacityOperation policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter table AnomalyBaseline policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter table BpaFindings policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+
+.alter materialized-view CuByWorkspace5m policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
+.alter materialized-view CuByWorkspaceHourly policy retention @'{"SoftDeletePeriod": "400.00:00:00", "Recoverability": "Disabled"}'
