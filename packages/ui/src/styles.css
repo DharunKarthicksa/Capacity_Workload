@@ -1,0 +1,61 @@
+/* Capacity Insights shared UI. Tokens only; each shell can override them. Dark mode follows the .dark class or the OS setting. */
+.ci-root {
+  --ci-bg: #ffffff;
+  --ci-surface: #f5f5f5;
+  --ci-border: #d1d1d1;
+  --ci-text: #242424;
+  --ci-muted: #616161;
+  --ci-brand: #0f6cbd;
+  --ci-interactive: #0f6cbd;
+  --ci-background: #8764b8;
+  --ci-warn: #c50f1f;
+  --ci-ok: #107c10;
+  color: var(--ci-text);
+  background: var(--ci-bg);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+}
+.dark .ci-root {
+  --ci-bg: #1f1f1f; --ci-surface: #2b2b2b; --ci-border: #424242; --ci-text: #f5f5f5; --ci-muted: #adadad;
+  --ci-brand: #479ef5; --ci-interactive: #479ef5; --ci-background: #b59ce0; --ci-warn: #ff6b6b; --ci-ok: #6bd16b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .ci-root {
+    --ci-bg: #1f1f1f; --ci-surface: #2b2b2b; --ci-border: #424242; --ci-text: #f5f5f5; --ci-muted: #adadad;
+    --ci-brand: #479ef5; --ci-interactive: #479ef5; --ci-background: #b59ce0; --ci-warn: #ff6b6b; --ci-ok: #6bd16b;
+  }
+}
+.ci-root { min-height: 100vh; padding: 16px; box-sizing: border-box; }
+.ci-root *, .ci-root *::before, .ci-root *::after { box-sizing: inherit; }
+.ci-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.ci-title { font-size: 20px; font-weight: 600; margin: 0; }
+.ci-tabs { display: flex; gap: 4px; }
+.ci-tabs button, .ci-btn {
+  border: 1px solid var(--ci-border); background: var(--ci-surface); color: var(--ci-text);
+  padding: 6px 14px; border-radius: 4px; cursor: pointer; font: inherit;
+}
+.ci-tabs button[aria-current="page"] { background: var(--ci-brand); border-color: var(--ci-brand); color: #fff; }
+.ci-select { padding: 6px 8px; border-radius: 4px; border: 1px solid var(--ci-border); background: var(--ci-bg); color: var(--ci-text); font: inherit; }
+.ci-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.ci-muted { color: var(--ci-muted); }
+.ci-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.ci-tile { background: var(--ci-surface); border: 1px solid var(--ci-border); border-radius: 6px; padding: 12px 14px; }
+.ci-tile-label { color: var(--ci-muted); font-size: 12px; }
+.ci-tile-value { font-size: 28px; font-weight: 600; margin-top: 2px; }
+.ci-tile-sub { color: var(--ci-muted); font-size: 12px; margin-top: 2px; }
+.ci-panel { background: var(--ci-surface); border: 1px solid var(--ci-border); border-radius: 6px; padding: 12px 14px; margin-bottom: 16px; }
+.ci-panel h2 { font-size: 15px; margin: 0 0 8px; }
+.ci-chart { width: 100%; height: auto; display: block; }
+.ci-grid { stroke: var(--ci-border); stroke-width: 1; }
+.ci-axis { fill: var(--ci-muted); font-size: 11px; }
+.ci-mark { fill: var(--ci-warn); stroke: var(--ci-bg); stroke-width: 1.5; }
+.ci-legend { display: flex; gap: 16px; margin-top: 6px; color: var(--ci-muted); font-size: 12px; }
+.ci-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.ci-table { width: 100%; border-collapse: collapse; }
+.ci-table th, .ci-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--ci-border); }
+.ci-table th { color: var(--ci-muted); font-weight: 600; font-size: 12px; }
+.ci-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--ci-border); }
+.ci-badge.warn { color: var(--ci-warn); border-color: var(--ci-warn); }
+.ci-badge.ok { color: var(--ci-ok); border-color: var(--ci-ok); }
+.ci-error { border: 1px solid var(--ci-warn); color: var(--ci-warn); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+.ci-empty { color: var(--ci-muted); padding: 24px; text-align: center; }
