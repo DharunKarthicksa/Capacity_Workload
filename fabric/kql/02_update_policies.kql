@@ -30,7 +30,9 @@
         WindowSeconds = todouble(WindowSeconds),
         OverageCuMs = todouble(d.overageTotalCapacityUnitMs),
         InteractiveDelayThresholdPercent = todouble(d.interactiveDelayThresholdPercentage),
-        Breakdown = d.capacityUnitUtilizationBreakdown
+        Breakdown = d.capacityUnitUtilizationBreakdown,
+        InteractiveRejectionThresholdPercent = todouble(d.interactiveRejectionThresholdPercentage),
+        BackgroundRejectionThresholdPercent = todouble(d.backgroundRejectionThresholdPercentage)
 }
 
 .create-or-alter function with (docstring = 'Parse capacity State events (schema not yet verified)', folder = 'ingest') fn_ParseState() {

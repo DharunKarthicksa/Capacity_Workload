@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/fewShots/1.0.0/schema.json",
+  "fewShots": [
+    {
+      "id": "cd73af6c-8240-518e-86ff-fa869e922787",
+      "question": "What is the CU utilization right now?",
+      "query": "CapacitySummary | where Timestamp > ago(10m) | summarize arg_max(Timestamp, CuPercent, InteractivePercent, BackgroundPercent, InteractiveDelayThresholdPercent) by CapacityName"
+    },
+    {
+      "id": "c66bf0c5-d8bc-546d-ad31-5c7db104ab7a",
+      "question": "What were the p95 and peak CU in the last 24 hours?",
+      "query": "CapacitySummary | where Timestamp > ago(24h) | summarize p95_cu = percentile(CuPercent, 95), peak_cu = max(CuPercent), peak_at = arg_max(CuPercent, Timestamp) by CapacityName"
+    },
+    {
+      "id": "9f164685-b0c8-5ada-8c0b-b6b509e39838",
+      "question": "Will we throttle in the next hour?",
+      "query": "CapacitySummary | where Timestamp > ago(30m) | summarize window_now = arg_max(Timestamp, InteractiveDelayThresholdPercent), window_30m_ago = arg_min(Timestamp, InteractiveDelayThresholdPercent) by CapacityName"
+    },
+    {
+      "id": "8bda5884-2eb3-56dc-a3cf-7b1b266c444c",
+      "question": "Show anomalies in the last 24 hours",
+      "query": "CapacitySummary | where Timestamp > ago(24h) and AnomalyScore > 3 | project Timestamp, CapacityName, CuPercent, AnomalyScore | order by Timestamp desc"
+    },
+    {
+      "id": "a289161d-5f29-5224-8bf5-52ca636eb69e",
+      "question": "Which semantic models should we fix first?",
+      "query": "BpaFindings | where ScannedAt == toscalar(BpaFindings | summarize max(ScannedAt)) | summarize errors = countif(Severity == 'Error'), warnings = countif(Severity == 'Warning') by ModelName, WorkspaceName | order by errors desc, warnings desc | take 10"
+    },
+    {
+      "id": "56a1bae2-41e8-5495-9cfa-7c40f4c5139d",
+      "question": "Which workspace uses the most CU?",
+      "query": "CapacityOperation | where Timestamp > ago(24h) | summarize cu_seconds = sum(CuSeconds), operations = count() by WorkspaceName | top 10 by cu_seconds desc"
+    }
+  ]
+}

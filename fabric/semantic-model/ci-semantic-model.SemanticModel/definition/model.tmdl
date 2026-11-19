@@ -4,6 +4,7 @@ model Model
 	discourageImplicitMeasures
 
 ref table CapacitySummary
+ref table CapacityHourly
 ref table CapacityState
 ref table CapacityOperation
 ref table CuByWorkspaceHourly

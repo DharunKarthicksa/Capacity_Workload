@@ -22,7 +22,10 @@ services:
     indexDocument: index.html
     assetAccess: protected
   functions:
-    enabled: false
+    enabled: true
+    buildCommand: npm run build
+    auth:
+      type: application
 connectors:
   - name: ci-semantic-model
     type: fabric-semanticmodel

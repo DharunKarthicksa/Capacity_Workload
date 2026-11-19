@@ -1,0 +1,675 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/dataAgent/definition/dataSource/1.0.0/schema.json",
+  "artifactId": "32dbe0c2-14e8-4199-8be2-f9e99ccdcfc1",
+  "workspaceId": "415f790e-a590-4b59-b30a-c3a70a48de1e",
+  "dataSourceInstructions": "Use KQL. Filter CapacitySummary by Timestamp first (for example Timestamp > ago(2h)). CapacityId is a lowercase guid; CapacityName is the display name. For \"now\" use arg_max(Timestamp, *) by CapacityId. For p95 use percentile(CuPercent, 95). Do not query RawCapacityEvents.",
+  "displayName": "ci-eventhouse",
+  "type": "kusto",
+  "userDescription": "Capacity Insights Eventhouse: 30-second capacity summaries, anomaly baseline and semantic model findings.",
+  "metadata": null,
+  "elements": [
+    {
+      "id": "ca9f1af1-daf4-5126-8e95-751ab4c313a4",
+      "is_selected": false,
+      "display_name": "Tables",
+      "type": "table_grouping",
+      "description": null,
+      "children": [
+        {
+          "id": "aba75c58-16b1-50eb-9412-5e2c33e0e3ca",
+          "is_selected": true,
+          "display_name": "AnomalyBaseline",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "2d6b7d95-ed6b-51d8-8bae-dd77c11812c0",
+              "is_selected": true,
+              "display_name": "CapacityId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "8d929e38-b0e1-5ffe-b4d8-ec66b43784c3",
+              "is_selected": true,
+              "display_name": "HourOfWeek",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Int32"
+            },
+            {
+              "id": "4b26578a-c6e4-5834-940e-49e0ea305a4f",
+              "is_selected": true,
+              "display_name": "Mean",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "57b94372-c58a-5ee7-8a66-9dff9b3e1b4c",
+              "is_selected": true,
+              "display_name": "Std",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "cbd65350-1416-57a9-ba6f-9b8de5b9f077",
+              "is_selected": true,
+              "display_name": "Samples",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Int64"
+            },
+            {
+              "id": "f89518db-5185-57c5-8fbc-7711d246c5b2",
+              "is_selected": true,
+              "display_name": "UpdatedAt",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            }
+          ]
+        },
+        {
+          "id": "14b12cbb-99ed-5db0-a311-d614c61ee62d",
+          "is_selected": true,
+          "display_name": "BpaFindings",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "6c63fbad-881b-5689-a6ff-7579432c4902",
+              "is_selected": true,
+              "display_name": "ScannedAt",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "d64cdcc1-6cc6-5348-b573-01f5e2edeefb",
+              "is_selected": true,
+              "display_name": "WorkspaceId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "3171f127-1d27-5055-9ae1-ef66af45c3ce",
+              "is_selected": true,
+              "display_name": "WorkspaceName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "647a7059-d94c-5471-a830-697752ac89e2",
+              "is_selected": true,
+              "display_name": "ModelId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "976a59d1-9a89-5655-ba0c-16e0389d1fcd",
+              "is_selected": true,
+              "display_name": "ModelName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "779e23ce-cd8b-522f-b6ca-30e31bedc7eb",
+              "is_selected": true,
+              "display_name": "Rule",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "520b5dee-2524-5480-99af-552a9242af38",
+              "is_selected": true,
+              "display_name": "Category",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "0c045a07-6fb2-51e2-8de9-5fb7b548761d",
+              "is_selected": true,
+              "display_name": "Severity",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "0f916987-6b98-5f3a-ae52-c3ff33d02a23",
+              "is_selected": true,
+              "display_name": "Description",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            }
+          ]
+        },
+        {
+          "id": "30d8cddf-2408-5cf6-81aa-b6187e09ae49",
+          "is_selected": true,
+          "display_name": "CapacityOperation",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "946e291c-16cb-52d7-bd4e-54da2394f496",
+              "is_selected": true,
+              "display_name": "Timestamp",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "187b95fa-7fc6-5561-b716-a5dfd621c7f0",
+              "is_selected": true,
+              "display_name": "CapacityId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "286678d0-1be7-5a61-8d1a-721fcd479e2d",
+              "is_selected": true,
+              "display_name": "WorkspaceId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "ec12d591-b278-55da-a61f-304e2dfb3909",
+              "is_selected": true,
+              "display_name": "WorkspaceName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "19f02f4f-bfb0-5cd0-b920-d425455e9e9d",
+              "is_selected": true,
+              "display_name": "ItemId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "c4bfd914-c286-530a-a39b-144cdd6c2135",
+              "is_selected": true,
+              "display_name": "ItemName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "f50b4d8d-9cc4-5150-999d-21d1c51774ab",
+              "is_selected": true,
+              "display_name": "ItemKind",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "bfa3bf54-6cd2-57f7-841b-982e204fda90",
+              "is_selected": true,
+              "display_name": "OperationName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "5900cc5c-6cfb-5d97-9ae8-389a65dcb511",
+              "is_selected": true,
+              "display_name": "OperationType",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "f9803a00-def9-591f-a3bd-278fb08d0592",
+              "is_selected": true,
+              "display_name": "CuSeconds",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "fcc958c5-8998-505b-bb8c-8825ee64e17a",
+              "is_selected": true,
+              "display_name": "DurationSeconds",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "0bbae9c5-4935-5743-9464-2c801e14b52f",
+              "is_selected": true,
+              "display_name": "Status",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "3f18d821-25c9-5a2e-ac85-e527a9fc3348",
+              "is_selected": true,
+              "display_name": "UserPrincipal",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "36e4d79b-5fba-518f-ace0-1a3e56d8dd55",
+              "is_selected": true,
+              "display_name": "Raw",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            }
+          ]
+        },
+        {
+          "id": "a84e3434-012f-577e-a761-5583f32c388f",
+          "is_selected": true,
+          "display_name": "CapacityState",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "3e9f4b41-4d79-512a-abc1-0e45717fbe43",
+              "is_selected": true,
+              "display_name": "Timestamp",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "005a2b67-e12e-5ebe-b86c-799d35973ccf",
+              "is_selected": true,
+              "display_name": "CapacityId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "27f4c4e3-a332-5e43-9e24-28c683cfdeb7",
+              "is_selected": true,
+              "display_name": "CapacityName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "b1ab3ccc-c24c-5af2-bb20-12c9b28868b6",
+              "is_selected": true,
+              "display_name": "State",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "51f6c0f1-3c3c-568a-b245-29e76bd2878c",
+              "is_selected": true,
+              "display_name": "InteractiveDelayThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "9a64ac91-e771-53e7-bb90-ae96f6e0d5d3",
+              "is_selected": true,
+              "display_name": "InteractiveRejectThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "74ded0a0-be26-5e5a-99ee-3374b1d0930b",
+              "is_selected": true,
+              "display_name": "BackgroundRejectThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "77e6ca7f-b264-564b-a586-126ceca0a401",
+              "is_selected": true,
+              "display_name": "Raw",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            }
+          ]
+        },
+        {
+          "id": "a75adb97-65d7-588c-bb3e-23d5af2707ef",
+          "is_selected": true,
+          "display_name": "CapacitySummary",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "0f5b76a1-00d7-59e8-a5c5-34f823010358",
+              "is_selected": true,
+              "display_name": "Timestamp",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "568ae27c-f725-56ad-bff0-3de8a1003e7d",
+              "is_selected": true,
+              "display_name": "CapacityId",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "739f139d-0668-539a-8c8d-e58c9a15faf6",
+              "is_selected": true,
+              "display_name": "CapacityName",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "5cd34f8f-e47c-565f-8586-e5364c9f7931",
+              "is_selected": true,
+              "display_name": "CuPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "062260ec-f314-5421-8564-0a1a3e9713e9",
+              "is_selected": true,
+              "display_name": "InteractivePercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "38c501df-8ad1-5221-bff7-1da60642d7ee",
+              "is_selected": true,
+              "display_name": "BackgroundPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "6a2da2f1-3894-567d-a4f8-66eb10d4dd5f",
+              "is_selected": true,
+              "display_name": "AnomalyScore",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "965c0b0e-da11-5133-a33a-69cafc05561c",
+              "is_selected": true,
+              "display_name": "Raw",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            },
+            {
+              "id": "8aa3cb1b-39f8-5f2b-803a-75de47d40a5d",
+              "is_selected": true,
+              "display_name": "Sku",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "2e3f4166-5bd9-5ead-9769-a77e9f435078",
+              "is_selected": true,
+              "display_name": "Region",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "c33d5c52-928f-5697-b8a4-9ac0d7e10367",
+              "is_selected": true,
+              "display_name": "BaseCapacityUnits",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "2986a377-9d93-518d-b3b9-d1b8a4094b75",
+              "is_selected": true,
+              "display_name": "WindowSeconds",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "9e74d331-251d-5cc0-a7f8-156643651e35",
+              "is_selected": true,
+              "display_name": "OverageCuMs",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "6029dcb7-c48b-5a32-a905-d2a99fd4721d",
+              "is_selected": true,
+              "display_name": "InteractiveDelayThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "f2541c46-6f37-5d37-a6ec-9398e0436bad",
+              "is_selected": true,
+              "display_name": "Breakdown",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            },
+            {
+              "id": "14a1cf1d-f2f5-5e7f-b36f-f405da5e3425",
+              "is_selected": true,
+              "display_name": "InteractiveRejectionThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "06cfb2d7-115d-595d-a9f4-998c0df30226",
+              "is_selected": true,
+              "display_name": "BackgroundRejectionThresholdPercent",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            }
+          ]
+        },
+        {
+          "id": "bc1e4925-9a9a-5038-9051-b7d7eb8a4b0d",
+          "is_selected": false,
+          "display_name": "RawCapacityEvents",
+          "type": "kusto.table",
+          "description": null,
+          "children": [
+            {
+              "id": "3648c045-ecdd-5a45-8d6a-997dd4e06852",
+              "is_selected": false,
+              "display_name": "Event",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            },
+            {
+              "id": "fccc5111-eb01-57be-bca7-3b99d49adb2f",
+              "is_selected": false,
+              "display_name": "IngestionTime",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "7667985b-de8d-5f70-95d1-8636ee16e10a",
+              "is_selected": false,
+              "display_name": "specversion",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "0a064e90-26aa-5ffb-bbce-2ddbdda5442f",
+              "is_selected": false,
+              "display_name": "dataschemaversion",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Double"
+            },
+            {
+              "id": "62ba3bcf-19f9-5dc9-9de2-a37931245575",
+              "is_selected": false,
+              "display_name": "subject",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "839f10cc-f5ca-5ce7-aa48-8b416794f764",
+              "is_selected": false,
+              "display_name": "id",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Guid"
+            },
+            {
+              "id": "561e8d91-9b7f-5b5c-898d-33b412980afe",
+              "is_selected": false,
+              "display_name": "type",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.String"
+            },
+            {
+              "id": "c831af11-7760-50fd-87ea-df86862b9743",
+              "is_selected": false,
+              "display_name": "time",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.DateTime"
+            },
+            {
+              "id": "0b4887a5-a9bf-52fe-ba92-ee80c4272b60",
+              "is_selected": false,
+              "display_name": "source",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Guid"
+            },
+            {
+              "id": "4c690293-53ef-56ff-b057-3f24954c74b5",
+              "is_selected": false,
+              "display_name": "data",
+              "type": "kusto.column",
+              "description": null,
+              "children": [],
+              "data_type": "System.Object"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5346e55c-6777-52c2-a87d-645daa933e75",
+      "is_selected": false,
+      "display_name": "Functions",
+      "type": "function_grouping",
+      "description": null,
+      "children": []
+    },
+    {
+      "id": "68ba1e01-4d0d-5985-bc93-80f081c58a21",
+      "is_selected": false,
+      "display_name": "Shortcuts",
+      "type": "shortcut_grouping",
+      "description": null,
+      "children": []
+    },
+    {
+      "id": "da3369ba-42fc-5fc7-97e1-f0cb0b194570",
+      "is_selected": false,
+      "display_name": "Materialized Views",
+      "type": "materialized_view_grouping",
+      "description": null,
+      "children": []
+    }
+  ]
+}

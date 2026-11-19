@@ -10,7 +10,8 @@
     | join kind = leftouter (AnomalyBaseline | project CapacityId, HourOfWeek, Mean, Std) on CapacityId, HourOfWeek
     | extend AnomalyScore = iff(isnull(Std) or Std < 0.5, real(null), (CuPercent - Mean) / Std)
     | project Timestamp, CapacityId, CapacityName, CuPercent, InteractivePercent, BackgroundPercent, AnomalyScore, Raw,
-        Sku, Region, BaseCapacityUnits, WindowSeconds, OverageCuMs, InteractiveDelayThresholdPercent, Breakdown
+        Sku, Region, BaseCapacityUnits, WindowSeconds, OverageCuMs, InteractiveDelayThresholdPercent, Breakdown,
+        InteractiveRejectionThresholdPercent, BackgroundRejectionThresholdPercent
 }
 
 .alter table CapacitySummary policy update

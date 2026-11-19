@@ -32,13 +32,18 @@ $tables = @(
       'Timestamp:dateTime', 'CapacityId:string', 'CapacityName:string', 'CuPercent:double',
       'InteractivePercent:double', 'BackgroundPercent:double', 'AnomalyScore:double', 'Sku:string',
       'Region:string', 'BaseCapacityUnits:double', 'WindowSeconds:double', 'OverageCuMs:double',
-      'InteractiveDelayThresholdPercent:double')
+      'InteractiveDelayThresholdPercent:double', 'InteractiveRejectionThresholdPercent:double',
+      'BackgroundRejectionThresholdPercent:double')
      measures = @(
       @{ n = 'Latest CU %'; e = 'VAR t = MAX(CapacitySummary[Timestamp]) RETURN CALCULATE(MAX(CapacitySummary[CuPercent]), CapacitySummary[Timestamp] = t)'; f = '0.00' },
       @{ n = 'Avg CU %'; e = 'AVERAGE(CapacitySummary[CuPercent])'; f = '0.00' },
       @{ n = 'Peak CU %'; e = 'MAX(CapacitySummary[CuPercent])'; f = '0.00' },
       @{ n = 'Max Anomaly Score'; e = 'MAX(CapacitySummary[AnomalyScore])'; f = '0.00' },
       @{ n = 'Anomaly Count'; e = 'COUNTROWS(FILTER(CapacitySummary, CapacitySummary[AnomalyScore] > 3))'; f = '0' }) },
+  @{ name = 'CapacityHourly'; cols = @(
+      'CapacityId:string', 'Hour:dateTime', 'CuAvg:double', 'CuMax:double', 'InteractiveAvg:double', 'BackgroundAvg:double',
+      'DelayWindowMax:double', 'RejectionWindowMax:double', 'BackgroundRejectionWindowMax:double', 'AnomalyMax:double',
+      'Samples:int64'); measures = @() },
   @{ name = 'CapacityState'; cols = @(
       'Timestamp:dateTime', 'CapacityId:string', 'CapacityName:string', 'State:string',
       'InteractiveDelayThresholdPercent:double', 'InteractiveRejectThresholdPercent:double',
