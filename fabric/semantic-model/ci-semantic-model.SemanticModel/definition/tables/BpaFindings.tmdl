@@ -1,0 +1,56 @@
+table BpaFindings
+	measure 'BPA Findings' = COUNTROWS(BpaFindings)
+		formatString: 0
+
+	column ScannedAt
+		dataType: dateTime
+		sourceColumn: ScannedAt
+		summarizeBy: none
+
+	column WorkspaceId
+		dataType: string
+		sourceColumn: WorkspaceId
+		summarizeBy: none
+
+	column WorkspaceName
+		dataType: string
+		sourceColumn: WorkspaceName
+		summarizeBy: none
+
+	column ModelId
+		dataType: string
+		sourceColumn: ModelId
+		summarizeBy: none
+
+	column ModelName
+		dataType: string
+		sourceColumn: ModelName
+		summarizeBy: none
+
+	column Rule
+		dataType: string
+		sourceColumn: Rule
+		summarizeBy: none
+
+	column Category
+		dataType: string
+		sourceColumn: Category
+		summarizeBy: none
+
+	column Severity
+		dataType: string
+		sourceColumn: Severity
+		summarizeBy: none
+
+	column Description
+		dataType: string
+		sourceColumn: Description
+		summarizeBy: none
+
+	partition BpaFindings = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "BpaFindings", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

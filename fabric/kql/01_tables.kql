@@ -1,0 +1,96 @@
+// 01_tables.kql - tables. Idempotent: .create-merge adds missing columns and never drops data.
+
+// Raw landing table for the Eventstream (Eventhouse direct ingestion). The Eventstream destination
+// splits each CloudEvent into these columns (verified against real events 2026-11-19), so the typed
+// tables below are parsed from `type`, `time` and `data`. Column types match what the destination created.
+// `Event` and `IngestionTime` were in the first draft and are unused; they remain in the deployed table.
+.create-merge table RawCapacityEvents (
+    specversion: real,
+    dataschemaversion: real,
+    subject: string,
+    id: guid,
+    type: string,
+    ['time']: datetime,
+    source: guid,
+    data: dynamic
+)
+
+// Update policies that reference other tables (the anomaly baseline join in 03) are not allowed
+// while streaming ingestion is on for the source table. Batched ingestion is fine for 30-second events.
+.alter table RawCapacityEvents policy streamingingestion '{"IsEnabled": false}'
+
+// Mapping for fresh installs (the portal creates its own, RawCapacityEvents_mapping_1, with the same effect).
+.create-or-alter table RawCapacityEvents ingestion json mapping 'RawCapacityEvents_mapping'
+'[{"column":"specversion","path":"$.specversion"},{"column":"dataschemaversion","path":"$.dataschemaversion"},{"column":"subject","path":"$.subject"},{"column":"id","path":"$.id"},{"column":"type","path":"$.type"},{"column":"time","path":"$.time"},{"column":"source","path":"$.source"},{"column":"data","path":"$.data"}]'
+
+// Capacity overview events: Summary (30-second utilization windows) and State (throttling state).
+// New columns are listed after Raw so the order is the same for existing and fresh databases.
+.create-merge table CapacitySummary (
+    Timestamp: datetime,
+    CapacityId: string,
+    CapacityName: string,
+    CuPercent: real,
+    InteractivePercent: real,
+    BackgroundPercent: real,
+    AnomalyScore: real,
+    Raw: dynamic,
+    Sku: string,
+    Region: string,
+    BaseCapacityUnits: real,
+    WindowSeconds: real,
+    OverageCuMs: real,
+    InteractiveDelayThresholdPercent: real,
+    Breakdown: dynamic
+)
+
+.create-merge table CapacityState (
+    Timestamp: datetime,
+    CapacityId: string,
+    CapacityName: string,
+    State: string,
+    InteractiveDelayThresholdPercent: real,
+    InteractiveRejectThresholdPercent: real,
+    BackgroundRejectThresholdPercent: real,
+    Raw: dynamic
+)
+
+// Capacity operation events: per-workspace / per-item CU (decision 001: available in our tenant).
+.create-merge table CapacityOperation (
+    Timestamp: datetime,
+    CapacityId: string,
+    WorkspaceId: string,
+    WorkspaceName: string,
+    ItemId: string,
+    ItemName: string,
+    ItemKind: string,
+    OperationName: string,
+    OperationType: string,
+    CuSeconds: real,
+    DurationSeconds: real,
+    Status: string,
+    UserPrincipal: string,
+    Raw: dynamic
+)
+
+// Hour-of-week baseline per capacity, rebuilt hourly from the last 4 weeks by baseline_refresh.
+.create-merge table AnomalyBaseline (
+    CapacityId: string,
+    HourOfWeek: int,
+    Mean: real,
+    Std: real,
+    Samples: long,
+    UpdatedAt: datetime
+)
+
+// Semantic model BPA results written by bpa_scan.
+.create-merge table BpaFindings (
+    ScannedAt: datetime,
+    WorkspaceId: string,
+    WorkspaceName: string,
+    ModelId: string,
+    ModelName: string,
+    Rule: string,
+    Category: string,
+    Severity: string,
+    Description: string
+)

@@ -1,0 +1,76 @@
+// 02_update_policies.kql - parse RawCapacityEvents into the typed tables on ingest.
+//
+// RawCapacityEvents holds one CloudEvent per row: `type`, `time`, `subject`, `data` (dynamic).
+//
+// Summary: VERIFIED against real events (dataschemaversion 1.3). Each event is a 30-second window.
+//   baseCapacityUnits (CU) * window seconds * 1000 = the capacity's CU-ms for the window.
+//   capacityUnitMs / that * 100 = utilization %, which equals interactiveDelayThresholdPercentage
+//   (checked: 26.69 / (64 * 30 * 1000) * 100 = 0.00139).
+// State and Operation: NOT yet verified. No State or Operation event had arrived when this was written.
+//   Field names below are best-effort and tolerant (coalesce). Inspect real rows with
+//   RawCapacityEvents | where type has 'State' | take 3   and adjust only the fn_Parse* functions.
+
+.create-or-alter function with (docstring = 'Parse capacity Summary events (verified schema)', folder = 'ingest') fn_ParseSummary() {
+    RawCapacityEvents
+    | where type == 'Microsoft.Fabric.Capacity.Summary'
+    | extend d = data
+    | extend WindowSeconds = (todatetime(d.windowEndTime) - todatetime(d.windowStartTime)) / 1s
+    | extend CapacityCuMs = todouble(d.baseCapacityUnits) * WindowSeconds * 1000
+    | project
+        Timestamp = todatetime(d.windowEndTime),
+        CapacityId = tolower(tostring(d.capacityId)),
+        CapacityName = coalesce(tostring(d.capacityFriendlyName), tostring(d.capacityName)),
+        CuPercent = iff(CapacityCuMs > 0, todouble(d.capacityUnitMs) / CapacityCuMs * 100, real(null)),
+        InteractivePercent = iff(CapacityCuMs > 0, todouble(d.utilizationInteractive) / CapacityCuMs * 100, real(null)),
+        BackgroundPercent = iff(CapacityCuMs > 0, todouble(d.utilizationBackground) / CapacityCuMs * 100, real(null)),
+        Raw = d,
+        Sku = tostring(d.capacitySku),
+        Region = tostring(d.capacityRegion),
+        BaseCapacityUnits = todouble(d.baseCapacityUnits),
+        WindowSeconds = todouble(WindowSeconds),
+        OverageCuMs = todouble(d.overageTotalCapacityUnitMs),
+        InteractiveDelayThresholdPercent = todouble(d.interactiveDelayThresholdPercentage),
+        Breakdown = d.capacityUnitUtilizationBreakdown
+}
+
+.create-or-alter function with (docstring = 'Parse capacity State events (schema not yet verified)', folder = 'ingest') fn_ParseState() {
+    RawCapacityEvents
+    | where type == 'Microsoft.Fabric.Capacity.State'
+    | extend d = data
+    | project
+        Timestamp = coalesce(todatetime(d.windowEndTime), todatetime(d.timestamp), ['time']),
+        CapacityId = tolower(coalesce(tostring(d.capacityId), tostring(d.capacityID))),
+        CapacityName = coalesce(tostring(d.capacityFriendlyName), tostring(d.capacityName)),
+        State = coalesce(tostring(d.capacityState), tostring(d.state)),
+        InteractiveDelayThresholdPercent = todouble(d.interactiveDelayThresholdPercentage),
+        InteractiveRejectThresholdPercent = coalesce(todouble(d.interactiveRejectionThresholdPercentage), todouble(d.interactiveRejectThresholdPercentage)),
+        BackgroundRejectThresholdPercent = coalesce(todouble(d.backgroundRejectionThresholdPercentage), todouble(d.backgroundRejectThresholdPercentage)),
+        Raw = d
+}
+
+.create-or-alter function with (docstring = 'Parse capacity Operation events (schema not yet verified)', folder = 'ingest') fn_ParseOperation() {
+    RawCapacityEvents
+    | where type has 'Operation'
+    | extend d = data
+    | project
+        Timestamp = coalesce(todatetime(d.timestamp), todatetime(d.startTime), todatetime(d.windowEndTime), ['time']),
+        CapacityId = tolower(coalesce(tostring(d.capacityId), tostring(d.capacityID))),
+        WorkspaceId = coalesce(tostring(d.workspaceId), tostring(d.workspaceID)),
+        WorkspaceName = coalesce(tostring(d.workspaceName), tostring(d.workspaceDisplayName)),
+        ItemId = coalesce(tostring(d.itemId), tostring(d.artifactId)),
+        ItemName = coalesce(tostring(d.itemName), tostring(d.artifactName)),
+        ItemKind = coalesce(tostring(d.itemKind), tostring(d.artifactKind), tostring(d.itemType)),
+        OperationName = coalesce(tostring(d.operationName), tostring(d.operation)),
+        OperationType = coalesce(tostring(d.operationType), tostring(d.workloadType)),
+        CuSeconds = coalesce(todouble(d.cuSeconds), todouble(d.capacityUnitSeconds), todouble(d.cuConsumed)),
+        DurationSeconds = coalesce(todouble(d.durationSeconds), todouble(d.duration)),
+        Status = tostring(d.status),
+        UserPrincipal = coalesce(tostring(d.userPrincipalName), tostring(d.user)),
+        Raw = d
+}
+
+.alter table CapacityState policy update
+@'[{"IsEnabled": true, "Source": "RawCapacityEvents", "Query": "fn_ParseState()", "IsTransactional": false, "PropagateIngestionProperties": false}]'
+
+.alter table CapacityOperation policy update
+@'[{"IsEnabled": true, "Source": "RawCapacityEvents", "Query": "fn_ParseOperation()", "IsTransactional": false, "PropagateIngestionProperties": false}]'

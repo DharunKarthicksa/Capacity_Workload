@@ -1,0 +1,382 @@
+{
+  "schema_version": "60",
+  "autoRefresh": {
+    "enabled": true,
+    "defaultInterval": "30s",
+    "minInterval": "30s"
+  },
+  "dataSources": [
+    {
+      "id": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e",
+      "name": "ci-eventhouse",
+      "clusterUri": "https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com",
+      "database": "32dbe0c2-14e8-4199-8be2-f9e99ccdcfc1",
+      "workspace": "415f790e-a590-4b59-b30a-c3a70a48de1e",
+      "kind": "kusto-trident",
+      "scopeId": "kusto-trident"
+    }
+  ],
+  "pages": [
+    {
+      "name": "Capacity break-glass",
+      "id": "c488307f-5557-5cc7-a926-735fa608d726"
+    }
+  ],
+  "parameters": [
+    {
+      "kind": "duration",
+      "id": "5f15a09d-3f57-5bb7-bcb3-a1d75ed73221",
+      "displayName": "Time range",
+      "description": "",
+      "beginVariableName": "_startTime",
+      "endVariableName": "_endTime",
+      "defaultValue": {
+        "kind": "dynamic",
+        "count": 1,
+        "unit": "hours"
+      },
+      "showOnPages": {
+        "kind": "all"
+      }
+    },
+    {
+      "kind": "string",
+      "id": "e33bdfe1-cb7d-51f8-8e53-7980596d9501",
+      "displayName": "Capacity",
+      "description": "",
+      "variableName": "_capacity",
+      "selectionType": "array",
+      "includeAllOption": true,
+      "defaultValue": {
+        "kind": "all"
+      },
+      "dataSource": {
+        "kind": "query",
+        "columns": {
+          "value": "CapacityName"
+        },
+        "queryRef": {
+          "kind": "query",
+          "queryId": "9e095c46-0153-54c4-a62a-e9f266563a57"
+        }
+      },
+      "showOnPages": {
+        "kind": "all"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "id": "f83cdb5c-efff-5988-a1e9-377ccf68ccfb",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "RawCapacityEvents | summarize latest_event = max(['time']) | project seconds_since_last_event = toint((now() - latest_event) / 1s)",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "8a9db66c-4cff-5b15-ac35-0192e5157453",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize arg_max(Timestamp, CuPercent) | project cu_percent = round(CuPercent, 3)",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "a3d95771-3459-5bc8-a324-aa7bc6c78992",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize arg_max(Timestamp, InteractivePercent, BackgroundPercent) | project interactive_pct = round(InteractivePercent, 3), background_pct = round(BackgroundPercent, 3)",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "659a22ac-d825-5d2b-966b-70e1db14582f",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize arg_max(Timestamp, OverageCuMs) | project overage_cu_ms = OverageCuMs",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "499d21d8-a1ab-5087-bd1a-64471e0f9199",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize cu = avg(CuPercent), interactive = avg(InteractivePercent), background = avg(BackgroundPercent) by t = bin(Timestamp, 1m) | extend limit_100 = 100.0 | order by t asc",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "90471bac-2907-5d46-b6a3-47890288a4d0",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) and isnotnull(AnomalyScore) | summarize anomaly_score = max(AnomalyScore) by t = bin(Timestamp, 5m) | order by t asc",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "a3a81a6d-ab2a-52b3-a660-351b0a45967d",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | mv-expand b = Breakdown | extend workload = tostring(b.WorkloadKind), cu_ms = coalesce(todouble(b.Utilization.Background), 0.0) + coalesce(todouble(b.Utilization.Interactive), 0.0) | summarize cu_ms = sum(cu_ms) by workload, t = bin(Timestamp, 5m) | order by t asc",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "aa0f5713-0eb1-5606-94e8-f1a1d1705552",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacityState | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | project Timestamp, CapacityName, State, InteractiveDelayThresholdPercent, InteractiveRejectThresholdPercent, BackgroundRejectThresholdPercent | order by Timestamp desc | take 50",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "8b36774a-ee7f-5b17-ad06-a76888760311",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacityOperation | where Timestamp between (_startTime .. _endTime) and (tolower(CapacityId) in (toscalar(CapacitySummary | where (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize make_set(CapacityId))) or tostring(_capacity) in ('', '[]', '[\"\"]')) | summarize cu_seconds = sum(CuSeconds), operations = count() by WorkspaceName, ItemKind | top 15 by cu_seconds desc",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "38be9fe3-0fda-516a-b59d-3b804ab5202e",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | where Timestamp between (_startTime .. _endTime) and (CapacityName in (_capacity) or tostring(_capacity) in ('', '[]', '[\"\"]')) and AnomalyScore > 3 | project Timestamp, CapacityName, CuPercent, AnomalyScore | order by Timestamp desc | take 100",
+      "usedVariables": [
+        "_startTime",
+        "_endTime",
+        "_capacity"
+      ]
+    },
+    {
+      "id": "9e095c46-0153-54c4-a62a-e9f266563a57",
+      "dataSource": {
+        "kind": "inline",
+        "dataSourceId": "6d5151f5-ce6b-5991-88a5-df5d5f679b5e"
+      },
+      "text": "CapacitySummary | summarize by CapacityName | order by CapacityName asc",
+      "usedVariables": []
+    }
+  ],
+  "baseQueries": [],
+  "tiles": [
+    {
+      "id": "774fefe9-856f-5584-9f94-e6a94684552d",
+      "title": "Data freshness: seconds since last event",
+      "visualType": "card",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "f83cdb5c-efff-5988-a1e9-377ccf68ccfb"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "415be252-86a3-59da-ab6c-be6b7bacb496",
+      "title": "CU % (latest)",
+      "visualType": "card",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 6,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "8a9db66c-4cff-5b15-ac35-0192e5157453"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "8cf0bb1e-e304-55fc-ba66-fdac493e3559",
+      "title": "Interactive vs background % (latest)",
+      "visualType": "multistat",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 12,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "a3d95771-3459-5bc8-a324-aa7bc6c78992"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "2386eebd-5186-5e10-900d-22df00785025",
+      "title": "Overage CU-ms (latest window)",
+      "visualType": "card",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 18,
+        "y": 0,
+        "width": 6,
+        "height": 4
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "659a22ac-d825-5d2b-966b-70e1db14582f"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "cfe57501-9b3e-54b4-8935-57b55f24925a",
+      "title": "CU % over time, with 100% line",
+      "visualType": "line",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 0,
+        "y": 4,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "499d21d8-a1ab-5087-bd1a-64471e0f9199"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "5a9f45f4-c999-518a-90f7-54f36be52b4d",
+      "title": "Anomaly score over time (alert above 3)",
+      "visualType": "column",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 12,
+        "y": 4,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "90471bac-2907-5d46-b6a3-47890288a4d0"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "8742dfcf-42f1-50d5-aeb5-9474cc22b92c",
+      "title": "CU by workload (CU-ms per 5 min)",
+      "visualType": "line",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 0,
+        "y": 12,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "a3a81a6d-ab2a-52b3-a660-351b0a45967d"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "64e29e86-946d-57cd-9ecb-864a48bb142d",
+      "title": "Recent capacity state events",
+      "visualType": "table",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 12,
+        "y": 12,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "aa0f5713-0eb1-5606-94e8-f1a1d1705552"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "8d878487-420d-5ae0-b45f-34b7343e604f",
+      "title": "Top workspaces by CU seconds (operation events)",
+      "visualType": "table",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 0,
+        "y": 20,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "8b36774a-ee7f-5b17-ad06-a76888760311"
+      },
+      "visualOptions": {}
+    },
+    {
+      "id": "54550109-4681-523e-b0f5-35e10647f755",
+      "title": "Anomalies (score above 3)",
+      "visualType": "table",
+      "pageId": "c488307f-5557-5cc7-a926-735fa608d726",
+      "layout": {
+        "x": 12,
+        "y": 20,
+        "width": 12,
+        "height": 8
+      },
+      "queryRef": {
+        "kind": "query",
+        "queryId": "38be9fe3-0fda-516a-b59d-3b804ab5202e"
+      },
+      "visualOptions": {}
+    }
+  ]
+}

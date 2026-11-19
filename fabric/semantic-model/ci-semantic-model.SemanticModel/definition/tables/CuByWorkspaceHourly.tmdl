@@ -1,0 +1,41 @@
+table CuByWorkspaceHourly
+	measure 'Workspace CU Seconds' = SUM(CuByWorkspaceHourly[CuSeconds])
+		formatString: #,0.0
+
+	column CapacityId
+		dataType: string
+		sourceColumn: CapacityId
+		summarizeBy: none
+
+	column WorkspaceId
+		dataType: string
+		sourceColumn: WorkspaceId
+		summarizeBy: none
+
+	column Hour
+		dataType: dateTime
+		sourceColumn: Hour
+		summarizeBy: none
+
+	column CuSeconds
+		dataType: double
+		sourceColumn: CuSeconds
+		summarizeBy: sum
+
+	column Operations
+		dataType: int64
+		sourceColumn: Operations
+		summarizeBy: sum
+
+	column PeakOpCu
+		dataType: double
+		sourceColumn: PeakOpCu
+		summarizeBy: sum
+
+	partition CuByWorkspaceHourly = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "CuByWorkspaceHourly", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

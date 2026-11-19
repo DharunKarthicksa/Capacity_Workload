@@ -13,3 +13,6 @@ Thumbs.db
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+
+# generated KQL database definition
+fabric/kql/build/

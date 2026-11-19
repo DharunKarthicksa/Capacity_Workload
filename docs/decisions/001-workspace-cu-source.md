@@ -1,6 +1,9 @@
 # 001: Source of per-workspace CU
 
-Status: **open** (settled in Phase 2, task 2.2)
+Status: **decided 2026-11-19: option 1, Capacity operation events.** The source `FabricCapacityOperationEvents`
+(event type `Microsoft.Fabric.CapacityOperationEvents.Operation`) was available in our tenant and is wired into
+the `ci-capacity-overview` Eventstream next to the overview source. No Operation event had arrived yet when
+this was written, so `fn_ParseOperation` is unverified; re-check against real rows (see `fabric/kql/02_update_policies.kql`).
 
 ## Question
 Are Capacity operation events available in our tenant (Real-Time hub, Fabric events)? The rebalancer needs per-workspace CU.

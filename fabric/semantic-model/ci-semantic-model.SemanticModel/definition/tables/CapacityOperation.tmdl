@@ -1,0 +1,76 @@
+table CapacityOperation
+	measure 'CU Seconds' = SUM(CapacityOperation[CuSeconds])
+		formatString: #,0.0
+
+	column Timestamp
+		dataType: dateTime
+		sourceColumn: Timestamp
+		summarizeBy: none
+
+	column CapacityId
+		dataType: string
+		sourceColumn: CapacityId
+		summarizeBy: none
+
+	column WorkspaceId
+		dataType: string
+		sourceColumn: WorkspaceId
+		summarizeBy: none
+
+	column WorkspaceName
+		dataType: string
+		sourceColumn: WorkspaceName
+		summarizeBy: none
+
+	column ItemId
+		dataType: string
+		sourceColumn: ItemId
+		summarizeBy: none
+
+	column ItemName
+		dataType: string
+		sourceColumn: ItemName
+		summarizeBy: none
+
+	column ItemKind
+		dataType: string
+		sourceColumn: ItemKind
+		summarizeBy: none
+
+	column OperationName
+		dataType: string
+		sourceColumn: OperationName
+		summarizeBy: none
+
+	column OperationType
+		dataType: string
+		sourceColumn: OperationType
+		summarizeBy: none
+
+	column CuSeconds
+		dataType: double
+		sourceColumn: CuSeconds
+		summarizeBy: sum
+
+	column DurationSeconds
+		dataType: double
+		sourceColumn: DurationSeconds
+		summarizeBy: sum
+
+	column Status
+		dataType: string
+		sourceColumn: Status
+		summarizeBy: none
+
+	column UserPrincipal
+		dataType: string
+		sourceColumn: UserPrincipal
+		summarizeBy: none
+
+	partition CapacityOperation = m
+		mode: directQuery
+		source =
+			let
+				Source = AzureDataExplorer.Contents("https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com", "ci-eventhouse", "CapacityOperation", [MaxRows=null, MaxSize=null, NoTruncate=null, AdditionalSetStatements=null])
+			in
+				Source

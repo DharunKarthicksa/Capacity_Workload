@@ -26,6 +26,12 @@ Status: **decided** 2026-11-19 (by the user). Supersedes the plan's capacity and
 4. **Load generation runs on the shared F64.** Task 1.7 is already deferred. When it is revisited, a CU burn on the F64 affects every other demo on it, so it needs an explicit go-ahead and a small, short run.
 5. **Everything stays inside the `Capacity Workload` folder** and keeps the `ci-` prefix (CLAUDE.md rules 11 and 12 are unchanged).
 
+## Observed capacity (decided 2026-11-19)
+
+The Eventstream `ci-capacity-overview` observes the existing **Trial FTL64 capacity in Central US**
+(`8c55b754-a1fe-49af-acbd-787ac7c9e2cd`, friendly name `Trial-20261028T063052Z-zJ-97UlFJUiSTXCsofG8Ew`), not the F64.
+The user chose to keep it. More capacities can be added later as extra sources on the same Eventstream.
+
 ## Open questions
 
 - Is the capacity ID `ce66fcc6-91b8-4a05-ac16-600a739d7b74` (what the workspace API reports) the F64? The capacity list for our identity shows one F64 named `fabricf64new` (`cedb67c2-a798-4ee4-879f-6eb1bc70ab10`) with a different ID. The user states the workspace is on the F64; record the capacity name from the workspace settings (License info) when convenient.
