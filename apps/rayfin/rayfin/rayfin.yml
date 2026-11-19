@@ -1,0 +1,36 @@
+id: capinsights
+name: capinsights
+version: 1.0.0
+services:
+  auth:
+    enabled: true
+    fabric:
+      enabled: true
+    allowedRedirectUris:
+      - http://localhost:5173
+      - http://localhost:5174
+      - http://127.0.0.1:5174
+      - https://sure-moor-09a08277f6-westus.webapp.fabricapps.net
+  data:
+    enabled: false
+  storage:
+    enabled: false
+  staticHosting:
+    enabled: true
+    folder: dist
+    buildCommand: npm run build:fabric
+    indexDocument: index.html
+    assetAccess: protected
+  functions:
+    enabled: false
+connectors:
+  - name: ci-semantic-model
+    type: fabric-semanticmodel
+    config:
+      workspaceId: 415f790e-a590-4b59-b30a-c3a70a48de1e
+      itemId: bb213b78-ca1f-4a05-b1e1-bd2e288368c6
+    auth:
+      type: delegated
+    version: "1"
+    operations:
+      - name: executeQuery
