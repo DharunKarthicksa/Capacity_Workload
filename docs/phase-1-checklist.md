@@ -45,11 +45,11 @@ Source: `Capacity Insights · 5-phase delivery plan.md`, Phase 1. Tick items her
 - [ ] 1.5 Create `RB-Test-A` and `RB-Test-B` workspaces (after capacities exist).
 - [ ] 1.6 Create GitHub issues (one per plan task), labels `phase-1` to `phase-5`, `ui-fix`, `you`, `blocked`.
 - [ ] 1.6 Add the two architecture SVGs under `docs/architecture/` (the plan's embedded visuals are not in the markdown file; supply them or ask Claude Code to redraw).
-- [ ] 1.7 Write `fabric/notebooks/loadgen.ipynb`, import to both test workspaces, run it.
+- [ ] 1.7 **Deferred** (decision 2026-11-19, no CU burn for now): write `fabric/notebooks/loadgen.ipynb`, import to both test workspaces, run it. Revisit before the Phase 2 anomaly test and the Phase 3 rebalancer test, which both need it.
 
 ## [GATE] Phase 1 exit
 
 - [ ] `fab ls` shows the three workspaces on the intended capacities.
-- [ ] `fab job run` on `loadgen` succeeds in both test workspaces.
+- [ ] `fab job run` on `loadgen` succeeds in both test workspaces. **Deferred with task 1.7**; sign off the rest of the gate without it only with the lead's agreement.
 - [ ] Repo exists with `CLAUDE.md`, issue board and labels.
 - [ ] App appears as an item type in `CapInsights-Dev`.
