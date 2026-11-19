@@ -15,6 +15,9 @@ A Fabric App cannot be listed on the Workload Hub, which is why there are two sh
 - Build location: folder `Capacity Workload` (the plan calls it `CapInsights-Dev`) inside the **SE&I Customer Demos Workspace**, workspace ID `415f790e-a590-4b59-b30a-c3a70a48de1e`.
 - Folder API ID: `b556fb13-1994-4e86-9efc-8039e4b6ed11`. When creating items via REST, pass it as `folderId`. Details in `docs/environment.md`.
 - Every item we create is prefixed `ci-`.
+- **Existing resources only** (decision `docs/decisions/003-existing-resources-only.md`): no new capacities and no new workspaces. Everything runs on the F64 that the SE&I workspace sits on, and that F64 is also monitored. Do not propose or create capacities, workspaces or `RB-Test-*` workspaces.
+- Because no `RB-Test-*` workspace exists, `rebalance_executor` is propose-and-audit only: it never calls `assignToCapacity` (rule 5).
+- The end product is an Extensibility Toolkit workload (Phases 4-5); the Rayfin app is the proving ground.
 
 ## Rules
 
