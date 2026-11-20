@@ -2,7 +2,8 @@
 # into fabric/installer/CapacityInsights_Install.ipynb. It runs in a Fabric Python notebook and creates the
 # items in the notebook's own workspace. Re-running is safe: existing items are updated, not duplicated.
 #
-# Expects these names from earlier cells: PREFIX, FOLDER, INSTALL_DATA_AGENT, SCHEDULE_NOTEBOOKS, BUNDLE_B64, SOURCE.
+# Expects these names from earlier cells: PREFIX, FOLDER, INSTALL_DATA_AGENT, SCHEDULE_NOTEBOOKS, MONITOR_CAPACITY_ID,
+# BUNDLE_B64, SOURCE.
 import base64
 import gzip
 import json
@@ -101,6 +102,8 @@ TARGET = {}
 # 0. Where are we? -------------------------------------------------------------------------------
 # Every tenant and capacity is different, so look before creating anything.
 WS_NAME = ""
+WS_CAPACITY = {}
+MY_CAPACITIES = []
 try:
     ws_info = call("GET", f"workspaces/{WS}")
     WS_NAME = ws_info.get("displayName", "")
@@ -109,9 +112,11 @@ try:
         raise RuntimeError(f"Workspace '{WS_NAME}' is not on a Fabric capacity. Assign one in Workspace settings, then run again.")
     cap = None
     try:  # only lists capacities you administer or contribute to; that is fine, the SKU is just for advice
-        cap = next((c for c in listing("capacities") if str(c.get("id", "")).lower() == cap_id.lower()), None)
+        MY_CAPACITIES = listing("capacities")
+        cap = next((c for c in MY_CAPACITIES if str(c.get("id", "")).lower() == cap_id.lower()), None)
     except Exception:
         pass
+    WS_CAPACITY = dict(cap or {}, id=cap_id)
     sku = str((cap or {}).get("sku", "")).upper()
     log("Workspace", "ok", f"'{WS_NAME}' on capacity {(cap or {}).get('displayName', cap_id)}"
         + (f" ({sku}, {cap.get('region', '?')})" if cap else " (SKU not visible to you)"))
@@ -219,24 +224,92 @@ if INSTALL_DATA_AGENT:  # noqa: F821
     except Exception as e:
         log("Data agent", "failed", str(e)[:300] + " (needs a paid F2 or larger capacity and the data agent tenant settings)")
 
-# 8. Summary ---------------------------------------------------------------------------------------
+# 8. Eventstream ----------------------------------------------------------------------------------
+# Created ready to run: capacity events in, the Eventhouse table out. If the service refuses the configuration,
+# an empty Eventstream is created instead and the manual steps are printed at the end.
+ES_NAME = PREFIX + "capacity-overview"  # noqa: F821
+MONITORED = (MONITOR_CAPACITY_ID or WS_CAPACITY.get("id") or "").lower()  # noqa: F821
+TODO = []
+ES_MANUAL = f"""Finish the Eventstream {ES_NAME} by hand (about 5 minutes):
+     - Open {ES_NAME} and select Edit.
+     - Add source > Fabric capacity overview events > pick the capacity to monitor > keep all event types.
+     - Add source > Fabric capacity operation events > the same capacity (only works when the capacity is in
+       this workspace's region).
+     - Add destination > Eventhouse > this workspace > {EH_NAME} > database {db['name']} > table RawCapacityEvents.
+     - Publish. You need to be an admin of the capacity you pick."""
+
+
+def eventstream_definition(capacity_id, with_operations):
+    sources = [{"name": "capacity-overview", "type": "FabricCapacityOverviewEvents", "properties": {
+        "eventScope": "Capacity", "capacityId": capacity_id, "filters": [],
+        "includedEventTypes": ["Microsoft.Fabric.Capacity.State", "Microsoft.Fabric.Capacity.Summary", "Microsoft.Fabric.Capacity.OnDemandSummary"]}}]
+    if with_operations:
+        sources.append({"name": "capacity-operation", "type": "FabricCapacityOperationEvents", "properties": {
+            "eventScope": "Capacity", "capacityId": capacity_id, "filters": [],
+            "includedEventTypes": ["Microsoft.Fabric.CapacityOperationEvents.Operation"]}})
+    stream = ES_NAME + "-stream"
+    return {
+        "sources": sources,
+        "destinations": [{"name": "Eventhouse", "type": "Eventhouse", "inputNodes": [{"name": stream}], "properties": {
+            "dataIngestionMode": "ProcessedIngestion", "workspaceId": WS, "itemId": db["id"], "databaseName": db["name"],
+            "tableName": "RawCapacityEvents", "inputSerialization": {"type": "Json", "properties": {"encoding": "UTF8"}}}}],
+        "streams": [{"name": stream, "type": "DefaultStream", "properties": {}, "inputNodes": [{"name": x["name"]} for x in sources]}],
+        "operators": [], "compatibilityLevel": "1.1",
+    }
+
+
+def eventstream_status(es_id):
+    """Per-node status after creation, so a failed source is reported instead of silently missing."""
+    nodes = []
+    for _ in range(12):
+        topo = call("GET", f"workspaces/{WS}/eventstreams/{es_id}/topology")
+        nodes = topo.get("sources", []) + topo.get("destinations", [])
+        if nodes and all(n.get("status") in ("Running", "Failed", "Warning") for n in nodes):
+            break
+        time.sleep(10)
+    return [f"{n.get('name')}: {n.get('status')} - {str((n.get('error') or {}).get('errorMessage', ''))[-220:]}"
+            for n in nodes if n.get("status") != "Running"]
+
+
+try:
+    existing_es = find("eventstreams", ES_NAME)
+    if existing_es:
+        TARGET["eventstreamId"] = existing_es["id"]
+        problems = eventstream_status(existing_es["id"])
+        log("Eventstream", "exists", "left as it is" + ("; " + " | ".join(problems) if problems else ""))
+    elif not MONITORED:
+        TARGET["eventstreamId"], _ = ensure("eventstreams", ES_NAME)
+        TODO.append(ES_MANUAL)
+        log("Eventstream", "created", "empty: no capacity to monitor could be worked out, add the sources by hand")
+    else:
+        # Operation events are refused across regions, so only ask for them when the capacity is in this workspace's region.
+        mon = next((c for c in MY_CAPACITIES if str(c.get("id", "")).lower() == MONITORED), None)
+        same_region = mon is None or not WS_CAPACITY.get("region") or mon.get("region") == WS_CAPACITY.get("region")
+        try:
+            definition = [part("eventstream.json", json.dumps(eventstream_definition(MONITORED, same_region))),
+                          part("eventstreamProperties.json", json.dumps({"retentionTimeInDays": 1, "eventThroughputLevel": "Low"}))]
+            TARGET["eventstreamId"], how = ensure("eventstreams", ES_NAME, definition)
+            problems = eventstream_status(TARGET["eventstreamId"])
+            name = (mon or {}).get("displayName", MONITORED)
+            log("Eventstream", how if not problems else "partial", f"monitoring capacity {name}" + ("" if same_region else
+                " (overview events only: operation events are not available across regions)"))
+            for pr in problems:
+                if "Cross-region is not supported" in pr:
+                    print("   note: this capacity is in a different region from the workspace, and Fabric does not deliver operation "
+                          "events across regions. Capacity-level monitoring works; per-workspace detail will stay empty.")
+                else:
+                    print("   problem:", pr)
+            if any(pr.startswith("capacity-overview") or pr.startswith("Eventhouse") for pr in problems):
+                TODO.append("The Eventstream was created but part of it is not running (see the 'problem' lines above). "
+                            "The usual cause is that you are not an admin of the capacity. Open it, fix the failed part and publish.")
+        except Exception as e:
+            TARGET["eventstreamId"], _ = ensure("eventstreams", ES_NAME)
+            TODO.append(ES_MANUAL)
+            log("Eventstream", "created", f"empty: the automatic setup was refused ({str(e)[:160]})")
+except Exception as e:
+    TODO.append(ES_MANUAL.replace("Finish the Eventstream", "Create an Eventstream named").replace(" by hand", " and set it up by hand"))
+    log("Eventstream", "failed", str(e)[:300])
+
+TODO.append(f"""Set the semantic model credentials once (1 minute). Without this the app shows no live data:
+     - Workspace > {PREFIX}semantic-model > Settings > Data source credentials > Edit credentials > OAuth2 > Sign in.""")  # noqa: F821
 RESULT["target"] = TARGET
-print("\n==== Copy this block into apps/rayfin/target.json if you will deploy the app ====")
-print(json.dumps({"workspaceId": WS, "workspaceName": WS_NAME, "semanticModelId": TARGET.get("semanticModelId"),
-                  "dataAgentId": TARGET.get("dataAgentId") or "",
-                  "eventstreamId": "", "eventstreamName": PREFIX + "capacity-overview"}, indent=2))  # noqa: F821
-print(f"""
-==== What is left to do by hand ====
-1. Eventstream (about 5 minutes)
-   - New item > Eventstream, name it {PREFIX}capacity-overview.
-   - Add source > Fabric capacity overview events > pick the capacity to monitor > keep all event types.
-   - Add source > Fabric capacity operation events > the same capacity.
-   - Add destination > Eventhouse > Direct ingestion > this workspace > {EH_NAME} > database {db['name']}
-     > existing table RawCapacityEvents (JSON, mapping RawCapacityEvents_mapping). Publish.
-   - You need to be an admin of the capacity you pick.
-2. Semantic model credentials
-   - Workspace > {PREFIX}semantic-model > Settings > Data source credentials > Edit credentials > OAuth2 > Sign in.
-3. Check data after 2 minutes
-   - Open {PREFIX}capinsights-breakglass. The tiles should fill once events arrive.
-4. Run {PREFIX}bpa-scan once if you want Model health data today (it is scheduled daily).
-""")

@@ -2,9 +2,12 @@
 
   python scripts/build_installer.py
 
-The notebook carries every item definition inside it (KQL schema, semantic model, dashboard, notebooks,
-data agent), so the person running it needs no access to this repository. They import the notebook into
-their own Fabric workspace and select Run all. The install logic is fabric/installer/installer.py.
+The notebook carries everything inside it: the item definitions (KQL schema, semantic model, dashboard,
+notebooks, data agent) and the app's source. The person running it needs no access to this repository and
+nothing installed on their computer. They import the notebook into a Fabric workspace and select Run all.
+
+Logic lives in fabric/installer/: installer.py (data items and Eventstream), app_installer.py (the app),
+summary.py (the closing summary). The app source is packed from tracked files, so commit before building.
 Standard library only.
 """
 import base64
@@ -16,18 +19,80 @@ import os
 import re
 import subprocess
 import tarfile
+import textwrap
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 FABRIC = os.path.join(ROOT, "fabric")
-OUT = os.path.join(FABRIC, "installer", "CapacityInsights_Install.ipynb")
+INSTALLER = os.path.join(FABRIC, "installer")
+OUT = os.path.join(INSTALLER, "CapacityInsights_Install.ipynb")
 
-# The environment the definitions were exported from. The installer replaces these with the target's values.
+# The environment the definitions were exported from. The notebook is handed to people in other tenants, so it
+# must not carry these: each is swapped for a neutral token here, and the installer fills in the target's values.
 SOURCE = {
     "workspaceId": "415f790e-a590-4b59-b30a-c3a70a48de1e",
     "cluster": "https://trd-3p56kn96phc55ysd7n.z5.kusto.fabric.microsoft.com",
     "databaseId": "32dbe0c2-14e8-4199-8be2-f9e99ccdcfc1",
     "databaseName": "ci-eventhouse",
 }
+TOKENS = {
+    "workspaceId": "{{CI_WORKSPACE_ID}}",
+    "cluster": "{{CI_CLUSTER_URI}}",
+    "databaseId": "{{CI_DATABASE_ID}}",
+    "databaseName": SOURCE["databaseName"],  # a plain item name, the same in every install with the default prefix
+}
+EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
+# Our own item ids in the app source; set_app_target.py fills in the target's at install time.
+APP_SOURCE_IDS = [SOURCE["workspaceId"], "bb213b78-ca1f-4a05-b1e1-bd2e288368c6", "5aae0a2f-0406-4038-90bb-bb033277d2c8",
+                  "5eb5b1a1-cc6e-42c0-b246-053bb35e7539"]
+APP_SKIP = re.compile(r"^apps/rayfin/(\.agents|scripts|\.vscode)/|\.md$|LICENSE$|\.spec\.|/src/test/|preview\.|\.mcp\.json$|eslint\.config|vitest\.config|\.png$")
+
+INTRO = """
+# Capacity Insights: install into this workspace
+
+**Select Run all.** In about 5 minutes this notebook sets up Capacity Insights in the workspace it is in:
+
+| | What you get |
+| --- | --- |
+| Data | An Eventhouse with the full schema, and an Eventstream that feeds it with this workspace's capacity events |
+| Model and views | A semantic model and a fallback Real-Time Dashboard |
+| Jobs | Two scheduled notebooks: an hourly anomaly baseline and a daily model scan |
+| Ask | A data agent over the Eventhouse |
+| App | The Capacity Insights app: eight screens and the Ask pane |
+
+**Before you run it**
+- The workspace is on a Fabric capacity, and you are Contributor or higher on it.
+- To monitor a capacity you must be an admin of it. By default the notebook monitors the capacity this workspace runs on.
+- For the app, the Fabric Apps tenant setting is on for you.
+
+**When it finishes**, the last cell lists what was created, the app address, and anything left to do by hand. Normally that is one thing: signing in once on the semantic model.
+
+Nothing is installed on your computer and nothing outside this workspace is changed. Running it again is safe: finished parts are updated, not duplicated.
+"""
+
+PARAMS = """
+# Settings. The defaults are fine for a first run.
+PREFIX = "ci-"                 # every item name starts with this
+FOLDER = "Capacity Insights"   # workspace folder for the items; "" puts them in the workspace root
+MONITOR_CAPACITY_ID = ""       # capacity to monitor; "" means the capacity this workspace runs on
+INSTALL_APP = True             # needs the Fabric Apps tenant setting and internet access from notebooks
+INSTALL_DATA_AGENT = True      # skipped automatically on a trial capacity
+SCHEDULE_NOTEBOOKS = True      # hourly baseline refresh and daily model scan
+APP_NAME = PREFIX + "capinsights"
+WORKSPACE_LABEL = ""           # text next to the product name in the app; "" uses this workspace's name
+"""
+
+APP_WRAPPER = """# The app: built in this notebook's temporary disk and deployed with your own sign-in.
+APP_RESULT = {{}}
+if INSTALL_APP:
+    try:
+{body}
+    except Exception as e:
+        APP_RESULT = {{"error": str(e)}}
+        print("[failed ] App")
+        print(str(e)[:3000])
+else:
+    print("[skipped] App - INSTALL_APP is False")
+"""
 
 
 def read(path):
@@ -49,55 +114,6 @@ def collect():
     return files
 
 
-def md(text):
-    return {"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").splitlines(True)}
-
-
-def code(text):
-    return {"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": text.strip("\n").splitlines(True)}
-
-
-INTRO = """
-# Capacity Insights: install into this workspace
-
-Select **Run all**. The notebook creates the Capacity Insights data items **in the workspace this notebook is in**:
-
-| Item | Name (with the default prefix) |
-| --- | --- |
-| Eventhouse and KQL database, with the full schema | `ci-eventhouse` |
-| Semantic model (DirectQuery over the KQL database) | `ci-semantic-model` |
-| Real-Time Dashboard (fallback view) | `ci-capinsights-breakglass` |
-| Notebooks, scheduled | `ci-baseline-refresh` (hourly), `ci-bpa-scan` (daily) |
-| Data agent | `ci-data-agent` |
-
-**Before you run it**
-- The workspace must be on a Fabric capacity. The data agent needs a paid F2 or larger capacity.
-- You need Contributor or higher on the workspace.
-
-**It does not create** the Eventstream or set the semantic model's credentials. Both take a few minutes by hand, and the exact steps are printed at the end.
-
-Running it again is safe: existing items are updated, not duplicated. Nothing outside this workspace is touched.
-"""
-
-PARAMS = """
-# Parameters
-PREFIX = "ci-"                 # every item name starts with this
-FOLDER = "Capacity Insights"   # workspace folder for the items; "" puts them in the workspace root
-INSTALL_DATA_AGENT = True      # set False if the capacity or tenant does not allow data agents
-SCHEDULE_NOTEBOOKS = True      # hourly baseline refresh and daily model scan
-"""
-
-
-# The notebook is handed to people in other tenants, so it must not carry our identifiers.
-# Each one is swapped for a neutral token here; the installer puts the target's values in.
-TOKENS = {
-    "workspaceId": "{{CI_WORKSPACE_ID}}",
-    "cluster": "{{CI_CLUSTER_URI}}",
-    "databaseId": "{{CI_DATABASE_ID}}",
-    "databaseName": SOURCE["databaseName"],  # a plain item name, the same in every install with the default prefix
-}
-
-
 def neutralise(files):
     out = {}
     for path, text in files.items():
@@ -111,41 +127,8 @@ def neutralise(files):
     return out
 
 
-APP_OUT = os.path.join(FABRIC, "installer", "CapacityInsights_InstallApp.ipynb")
-EMPTY_GUID = "00000000-0000-0000-0000-000000000000"
-# Our own item ids in the app source. The app notebook must not carry them; set_app_target.py fills in the target's.
-APP_SOURCE_IDS = [SOURCE["workspaceId"], "bb213b78-ca1f-4a05-b1e1-bd2e288368c6", "5aae0a2f-0406-4038-90bb-bb033277d2c8",
-                  "5eb5b1a1-cc6e-42c0-b246-053bb35e7539"]
-APP_SKIP = re.compile(r"^apps/rayfin/(\.agents|scripts|\.vscode)/|\.md$|LICENSE$|\.spec\.|/src/test/|preview\.|\.mcp\.json$|eslint\.config|vitest\.config|\.png$")
-
-APP_INTRO = """
-# Capacity Insights: install the app into this workspace
-
-Select **Run all**. It deploys the Capacity Insights app (the eight screens and the Ask pane) as a Fabric App item **in the workspace this notebook is in**. You do not need Node.js, git or the repository on your computer.
-
-**Run the data installer notebook first.** This one looks for the items it created (`ci-semantic-model`, `ci-data-agent`, `ci-capacity-overview`) by name, so keep the same `PREFIX`.
-
-**Before you run it**
-- The **Fabric Apps** tenant setting must be on for you.
-- You need Contributor or higher on the workspace.
-- The notebook needs internet access to download Node.js and the app's packages. That is the default; some tenants restrict it.
-
-It takes about 5 to 10 minutes. It downloads Node.js to the notebook's temporary disk, builds the app there, and deploys it with your own sign-in. Nothing is installed on your computer, and the temporary files go when the session ends.
-
-Running it again redeploys the same app.
-"""
-
-APP_PARAMS = """
-# Parameters
-APP_NAME = "ci-capinsights"    # name of the App item to create or update
-PREFIX = "ci-"                 # must match the data installer's PREFIX
-FOLDER = "Capacity Insights"   # the app is moved here after deploying; "" leaves it in the workspace root
-WORKSPACE_LABEL = ""           # text next to the product name; "" uses this workspace's name
-"""
-
-
 def app_source():
-    """The tracked files the app needs to build, as a tar.gz, with our own ids and address removed."""
+    """The tracked files the app needs to build, as a tar.gz, with our own ids, address and label removed."""
     listed = subprocess.run(["git", "ls-files", "package.json", "package-lock.json", "packages/ui", "apps/rayfin", "scripts/set_app_target.py"],
                             cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
     names = [n for n in listed if n and not APP_SKIP.search(n)]
@@ -171,40 +154,35 @@ def app_source():
     return base64.b64encode(buf.getvalue()).decode(), len(names)
 
 
-def build_app_notebook():
-    source, count = app_source()
-    chunks = "\n".join(f'    "{source[i:i + 120]}"' for i in range(0, len(source), 120))
-    cell = "# App source, packed. Generated by scripts/build_installer.py; do not edit.\n" f"SOURCE_B64 = (\n{chunks}\n)\n"
-    nb = notebook([md(APP_INTRO), code(APP_PARAMS), code(cell), code(read(os.path.join(FABRIC, "installer", "app_installer.py")))])
-    with open(APP_OUT, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(nb, f, indent=1, ensure_ascii=False)
-        f.write("\n")
-    print(f"packed {count} source files into {os.path.relpath(APP_OUT, ROOT)} ({os.path.getsize(APP_OUT) // 1024} KB)")
+def md(text):
+    return {"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").splitlines(True)}
 
 
-def notebook(cells):
-    return {
-        "cells": cells,
-        "metadata": {
-            "kernel_info": {"name": "jupyter"},
-            "kernelspec": {"name": "jupyter", "display_name": "Jupyter"},
-            "language_info": {"name": "python"},
-            "microsoft": {"language": "python", "language_group": "jupyter_python"},
-            "dependencies": {},
-        },
-        "nbformat": 4, "nbformat_minor": 5,
-    }
+def code(text):
+    return {"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": text.strip("\n").splitlines(True)}
+
+
+def packed(name, value):
+    chunks = "\n".join(f'    "{value[i:i + 120]}"' for i in range(0, len(value), 120))
+    return f"{name} = (\n{chunks}\n)\n"
 
 
 def main():
-    build_app_notebook()
     files = neutralise(collect())
     bundle = base64.b64encode(gzip.compress(json.dumps(files).encode("utf-8"), 9)).decode()
-    chunks = "\n".join(f'    "{bundle[i:i + 120]}"' for i in range(0, len(bundle), 120))
-    bundle_cell = ("# Item definitions, packed. Generated by scripts/build_installer.py; do not edit.\n"
-                   f"SOURCE = {json.dumps(TOKENS)}\nBUNDLE_B64 = (\n{chunks}\n)\n")
+    source, count = app_source()
+    app_body = textwrap.indent(read(os.path.join(INSTALLER, "app_installer.py")).rstrip("\n"), " " * 8)
+    cells = [
+        md(INTRO),
+        code(PARAMS),
+        code("# Item definitions and app source, packed. Generated by scripts/build_installer.py; do not edit.\n"
+             f"SOURCE = {json.dumps(TOKENS)}\n" + packed("BUNDLE_B64", bundle) + packed("SOURCE_B64", source)),
+        code(read(os.path.join(INSTALLER, "installer.py"))),
+        code(APP_WRAPPER.format(body=app_body)),
+        code(read(os.path.join(INSTALLER, "summary.py"))),
+    ]
     nb = {
-        "cells": [md(INTRO), code(PARAMS), code(bundle_cell), code(read(os.path.join(FABRIC, "installer", "installer.py")))],
+        "cells": cells,
         "metadata": {
             "kernel_info": {"name": "jupyter"},
             "kernelspec": {"name": "jupyter", "display_name": "Jupyter"},
@@ -217,10 +195,10 @@ def main():
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(nb, f, indent=1, ensure_ascii=False)
         f.write("\n")
-    print(f"packed {len(files)} files ({sum(len(v) for v in files.values()) // 1024} KB) into {os.path.relpath(OUT, ROOT)} "
-          f"({os.path.getsize(OUT) // 1024} KB)")
-    for k in sorted(files):
-        print("  ", k)
+    old = os.path.join(INSTALLER, "CapacityInsights_InstallApp.ipynb")
+    if os.path.exists(old):
+        os.remove(old)
+    print(f"packed {len(files)} definitions and {count} app source files into {os.path.relpath(OUT, ROOT)} ({os.path.getsize(OUT) // 1024} KB)")
 
 
 if __name__ == "__main__":

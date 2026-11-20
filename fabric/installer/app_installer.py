@@ -7,6 +7,7 @@
 # `rayfin up` with the notebook user's own token. Nothing is installed on the user's computer.
 #
 # Expects these names from earlier cells: APP_NAME, PREFIX, FOLDER, WORKSPACE_LABEL, SOURCE_B64.
+# Sets APP_RESULT for the summary cell.
 import base64
 import io
 import json
@@ -65,13 +66,12 @@ target = {
 }
 if not target["semanticModelId"]:
     raise RuntimeError(f"No semantic model named {PREFIX}semantic-model in this workspace. "  # noqa: F821
-                       "Run the Capacity Insights data installer notebook first, with the same PREFIX.")
+                       "The data items step above must succeed first.")
 log("Items found", "ok", ", ".join(f"{k[:-2]}: {'yes' if v else 'no'}" for k, v in target.items() if k.endswith("Id") and k != "workspaceId"))
 if not target["dataAgentId"]:
     print("   note: no data agent found, so the Ask pane will show an error when used. Everything else works.")
 if not target["eventstreamId"]:
-    print("   note: no Eventstream found yet, so the 'Open the Eventstream' link in Add capacity will not work. "
-          "Create the Eventstream, then run this notebook again.")
+    print("   note: no Eventstream found, so the 'Open the Eventstream' link in Add capacity will not work.")
 
 # 2. Node.js, into the notebook's temporary disk ---------------------------------------------------
 os.makedirs(HOME, exist_ok=True)
@@ -140,12 +140,4 @@ except Exception as e:
     log("Folder", "skipped", f"{str(e)[:160]}; the app is in the workspace root")
 
 shutil.rmtree(WORK, ignore_errors=True)
-print(f"""
-==== Done in {round((time.time() - T0) / 60, 1)} minutes ====
-App address : {url.group(1) if url else '(not found in the output; open the app item in the workspace)'}
-In Fabric   : {portal.group(1) if portal else f'workspace item {APP_NAME}'}
-
-Open the address and sign in. Use the Live / Sample switch in the header.
-Live data needs the Eventstream and the semantic model credentials from the data installer's last steps.
-Run this notebook again whenever you want to redeploy; it updates the same app.
-""")
+APP_RESULT = {"url": url.group(1) if url else "", "portal": portal.group(1) if portal else "", "name": APP_NAME}  # noqa: F821
