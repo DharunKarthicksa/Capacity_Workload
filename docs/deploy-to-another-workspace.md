@@ -7,11 +7,13 @@ There are two parts. Part A is enough to see live capacity data. Part B adds the
 | | Part A: data items | Part B: the app |
 | --- | --- | --- |
 | What you get | Eventhouse with the schema, semantic model, fallback dashboard, two scheduled notebooks, data agent | The Capacity Insights app (eight screens and the Ask pane) |
-| How | Import one notebook and select Run all | Clone this repository and run four commands |
-| Time | About 15 minutes, including the manual steps | About 15 minutes |
-| Needs | A Fabric workspace on a Fabric capacity | Part A done, Node.js 22 or 24, Python 3, access to this repository |
+| How | Import one notebook and select Run all | Import a second notebook and select Run all |
+| Time | About 15 minutes, including the manual steps | About 10 minutes |
+| Needs | A Fabric workspace on a Fabric capacity | Part A done, and the Fabric Apps tenant setting |
 
-> **Status:** the installer notebook has not been run end to end in a second workspace yet. Your run is the first test. Each step reports on its own, so if one fails, copy its line from the output and send it back.
+Both notebooks are in `fabric/installer/`. You do not need Node.js, git or this repository on your computer.
+
+> **Status:** the app notebook (Part B) has been run successfully in the workspace it was built in: it deployed a working app in under 2 minutes. Neither notebook has been run in a second tenant yet, so your run is the first test of that. Each step reports on its own; if one fails, copy its line from the output and send it back.
 
 ## Before you start
 
@@ -49,7 +51,7 @@ This list comes from Microsoft's documentation and has not been checked in a sec
 
 **The capacity you monitor can be a different one** from the capacity your workspace runs on. You choose it when you add the Eventstream sources, and you must be an admin of it.
 
-**Signing in for Part B:** if your account belongs to more than one tenant, name the tenant so the app deploys to the right one: `npx rayfin login --tenant <your tenant id>`.
+**Internet access from notebooks:** the Part B notebook downloads Node.js and the app's packages. If your tenant blocks that, use the command-line route at the end of Part B.
 
 ## Part A: data items
 
@@ -75,48 +77,34 @@ Running the notebook again is safe. Existing items are updated, not duplicated.
 
 ## Part B: the app
 
-You need this repository on your machine.
+The app is **not** created by the Part A notebook. It has its own notebook, because building it takes longer and needs the Fabric Apps setting.
 
-1. Clone and install:
+1. Get the file `fabric/installer/CapacityInsights_InstallApp.ipynb`. It contains the app's source; it does not need access to this repository.
+2. Import it into the same workspace as Part A (**Import**, **Notebook**, **From this computer**).
+3. Keep `PREFIX` the same as in Part A. The notebook finds the semantic model, data agent and Eventstream by name.
+4. Select **Run all**. It takes about 5 to 10 minutes. It downloads Node.js to the notebook's temporary disk, builds the app there, and deploys it with your own sign-in.
+5. At the end it prints the **app address**. Open it, sign in, and switch between **Live** and **Sample** in the header.
 
-   ```powershell
-   git clone https://github.com/DharunKarthicksa/Capacity_Workload.git
-   cd Capacity_Workload
-   npm install
-   ```
+The app item is named `ci-capinsights` and is moved into the same folder as the other items. If the move is not allowed, it stays in the workspace root and the notebook says so.
 
-2. Create `apps/rayfin/target.json` from the block the notebook printed at the end ("Copy this block into apps/rayfin/target.json"). Add the Eventstream ID: open your Eventstream in Fabric and copy the GUID after `/eventstreams/` in the address bar.
+Run the notebook again any time to redeploy. If you create the Eventstream after deploying, run it again so the "Add capacity" link points at it.
 
-   ```json
-   {
-     "workspaceId": "<your workspace id>",
-     "workspaceName": "<shown next to the app name>",
-     "semanticModelId": "<from the notebook>",
-     "dataAgentId": "<from the notebook, or empty>",
-     "eventstreamId": "<from the Eventstream address>",
-     "eventstreamName": "ci-capacity-overview"
-   }
-   ```
+### If the notebook route is blocked
 
-3. Point the app at your items:
+Some tenants stop notebooks from reaching the internet. Then deploy from a computer with Node.js 22 or 24, Python 3 and this repository:
 
-   ```powershell
-   python scripts/set_app_target.py apps/rayfin/target.json
-   ```
+```powershell
+git clone https://github.com/DharunKarthicksa/Capacity_Workload.git
+cd Capacity_Workload
+npm install
+# create apps/rayfin/target.json from the block the Part A notebook printed, adding the Eventstream ID
+python scripts/set_app_target.py apps/rayfin/target.json
+cd apps/rayfin
+npx rayfin login
+npx rayfin up --workspace-id <your workspace id> --item-name ci-capinsights
+```
 
-4. Sign in and deploy:
-
-   ```powershell
-   cd apps/rayfin
-   npx rayfin login
-   npx rayfin up --workspace-id <your workspace id> --item-name ci-capinsights
-   ```
-
-   `rayfin up` creates the App item in your workspace and prints the app address ("Your app is live at ..."). Answer yes to its prompts.
-
-5. Open the address, sign in, and switch between **Live** and **Sample** in the header.
-
-Step 3 changes three files locally (`rayfin.yml`, `function_app.ts`, `rayfin-source.ts`). It also removes the original environment's app address from the sign-in redirect list, so only your own app can complete a sign-in. Do not commit these changes. To undo: `git checkout -- apps/rayfin`.
+`set_app_target.py` changes three files locally and removes the original environment's app address from the sign-in redirect list. Do not commit those changes. To undo: `git checkout -- apps/rayfin`. If your account belongs to more than one tenant, use `npx rayfin login --tenant <your tenant id>`.
 
 ## What to test
 
@@ -139,11 +127,11 @@ Known gaps, so you do not report them as bugs:
 
 ## Remove it again
 
-Delete these from your workspace (names shown with the default prefix): the app `ci-capinsights`, `ci-capacity-overview` (Eventstream), `ci-data-agent`, `ci-bpa-scan`, `ci-baseline-refresh`, `ci-capinsights-breakglass`, `ci-semantic-model`, `ci-eventhouse`, the folder, and the installer notebook.
+Delete these from your workspace (names shown with the default prefix): the app `ci-capinsights` and the two user data function items the deploy creates with it (`ci-capinsights` and `ci_capinsights_connector`), the app installer notebook, `ci-capacity-overview` (Eventstream), `ci-data-agent`, `ci-bpa-scan`, `ci-baseline-refresh`, `ci-capinsights-breakglass`, `ci-semantic-model`, `ci-eventhouse`, the folder, and the installer notebook.
 
 ## For the maintainers
 
-- Rebuild the installer after changing anything under `fabric/`: `python scripts/build_installer.py`.
-- The install logic is `fabric/installer/installer.py`. The notebook is generated; do not edit it by hand.
+- Rebuild both notebooks after changing anything under `fabric/`, `packages/ui/` or `apps/rayfin/`: `python scripts/build_installer.py`. The app notebook packs the tracked source files, so commit first.
+- The install logic is `fabric/installer/installer.py` (data items) and `fabric/installer/app_installer.py` (app). The notebooks are generated; do not edit them by hand.
 - The build swaps our workspace ID, cluster address and database ID for neutral tokens, and fails if any are left. The installer fills in the target's values. The notebook carries no identifiers, tokens or keys of ours.
 - `scripts/set_app_target.py` is how the app is pointed at another workspace. The repository's own values are ours; never commit a retargeted copy.
