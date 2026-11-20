@@ -4,10 +4,12 @@
   python scripts/set_app_target.py apps/rayfin/target.json --check   # show what would change, write nothing
 
 target.json is the block the installer notebook prints at the end:
-  { "workspaceId": "...", "semanticModelId": "...", "dataAgentId": "...", "eventstreamId": "...", "eventstreamName": "ci-capacity-overview" }
+  { "workspaceId": "...", "workspaceName": "My workspace", "semanticModelId": "...", "dataAgentId": "...",
+    "eventstreamId": "...", "eventstreamName": "ci-capacity-overview" }
 
-It rewrites four ids in three files (the semantic model connector in rayfin.yml, the data agent in the
-function, and the Eventstream link in the app). None of these are secrets. `eventstreamId` and `dataAgentId`
+It rewrites four ids and the workspace label in three files (the semantic model connector in rayfin.yml,
+the data agent in the function, and the Eventstream link in the app), and removes the source environment's
+deployed app address from the sign-in redirect list. None of these are secrets. `eventstreamId` and `dataAgentId`
 may be left empty: the "Add capacity" link and the data agent then will not work, everything else does.
 Standard library only.
 """
@@ -35,12 +37,15 @@ def main():
     agent = t.get("dataAgentId") or EMPTY
     stream = t.get("eventstreamId") or EMPTY
     stream_name = t.get("eventstreamName") or "ci-capacity-overview"
+    label = json.dumps(str(t.get("workspaceName") or ""), ensure_ascii=False)
     for key, value in (("dataAgentId", agent), ("eventstreamId", stream)):
         if not re.fullmatch(GUID, value):
             sys.exit(f"{key} is not a GUID in {args[0]}")
 
     edits = [
         ("apps/rayfin/rayfin/rayfin.yml", [
+            # Another environment's deployed address must not stay an allowed sign-in redirect. `rayfin up` adds this one's.
+            (r"(?m)^\s*- https://[^\n]*\.fabricapps\.net[^\n]*\n", "", True),
             (rf"(connectors:\s*\n\s*- name: ci-semantic-model\s*\n\s*type: fabric-semanticmodel\s*\n\s*config:\s*\n\s*workspaceId: ){GUID}", rf"\g<1>{ws}"),
             (rf"(connectors:\s*\n\s*- name: ci-semantic-model\s*\n\s*type: fabric-semanticmodel\s*\n\s*config:\s*\n\s*workspaceId: {GUID}\s*\n\s*itemId: ){GUID}", rf"\g<1>{model}"),
         ]),
@@ -52,6 +57,8 @@ def main():
             (rf'(const WORKSPACE_ID = "){GUID}(")', rf"\g<1>{ws}\g<2>"),
             (rf'(const EVENTSTREAM_ID = "){GUID}(")', rf"\g<1>{stream}\g<2>"),
             (r'(eventstreamName: ")[^"]*(")', rf"\g<1>{stream_name}\g<2>"),
+            # The whole string literal, including any escaped quotes, up to the closing semicolon.
+            (r'(export const WORKSPACE_LABEL = )"(?:[^"\\\n]|\\.)*";', lambda m: m.group(1) + label + ";"),
         ]),
     ]
     for rel, subs in edits:
@@ -59,9 +66,9 @@ def main():
         with open(path, encoding="utf-8") as f:
             text = f.read()
         new = text
-        for pattern, repl in subs:
-            new, n = re.subn(pattern, repl, new, count=1)
-            if n != 1:
+        for pattern, repl, *optional in subs:
+            new, n = re.subn(pattern, repl, new, count=0 if optional else 1)
+            if n != 1 and not optional:
                 sys.exit(f"Could not find the expected line in {rel} (pattern: {pattern[:60]}...). The file layout changed; update this script.")
         print(f"{'would update' if check else 'updated':12} {rel}" if new != text else f"{'unchanged':12} {rel}")
         if not check and new != text:

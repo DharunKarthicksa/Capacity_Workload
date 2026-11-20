@@ -94,7 +94,7 @@ export interface CapacityInsightsAppProps {
 }
 
 /** The whole product UI: header, navigation, the current screen and the docked data agent. Both shells mount this. */
-export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", askAgent, onboarding }: CapacityInsightsAppProps): ReactElement {
+export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboarding }: CapacityInsightsAppProps): ReactElement {
   const [screen, setScreen] = useState<ScreenKey>(routeFromHash);
   const [mode, setModeState] = useState<Mode>(readMode);
   const [picked, setPicked] = useState<string>();
@@ -196,8 +196,7 @@ export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", 
         <div className="ci-brand">
           <span className="ci-logo"><LogoIcon /></span>
           <span className="ci-brand-name">Capacity Insights</span>
-          <span className="ci-brand-sep" aria-hidden="true" />
-          <span className="ci-brand-sub">{subtitle}</span>
+          {subtitle ? <><span className="ci-brand-sep" aria-hidden="true" /><span className="ci-brand-sub">{subtitle}</span></> : null}
           <span className="ci-tag">{live ? "Live" : "Sample"}</span>
         </div>
         {screen !== "all-capacities" ? (
