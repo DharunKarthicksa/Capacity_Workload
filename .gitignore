@@ -16,3 +16,6 @@ __pycache__/
 
 # generated KQL database definition
 fabric/kql/build/
+
+# per-deployer app target (ids for another workspace), see docs/deploy-to-another-workspace.md
+apps/rayfin/target.json

@@ -1,4 +1,4 @@
-import { createDaxDataSource, rowsFromTable, type CapacityDataSource, type DaxExecutor } from "@capinsights/ui";
+import { createDaxDataSource, rowsFromTable, type CapacityDataSource, type DaxExecutor, type OnboardingConfig } from "@capinsights/ui";
 import { querySemanticModel } from "@/hooks/use-semantic-model-query";
 import { getRayfinClient } from "@/lib/rayfin-client";
 import { SemanticModelQueryError } from "@/lib/semantic-model-errors";
@@ -24,3 +24,18 @@ export const capacitySource: CapacityDataSource = createDaxDataSource(runDax);
  */
 export const askDataAgent = (question: string): Promise<string> =>
     getRayfinClient().functions.askDataAgent.invoke({ question }, { timeoutMs: 240_000 });
+
+/** The Eventstream that feeds ci-eventhouse (ids are not secrets). New capacities are added to it as sources. */
+const WORKSPACE_ID = "415f790e-a590-4b59-b30a-c3a70a48de1e";
+const EVENTSTREAM_ID = "5eb5b1a1-cc6e-42c0-b246-053bb35e7539";
+
+/**
+ * Guided "add a capacity". The list comes from the `listMyCapacities` Rayfin function, which runs as the
+ * app identity, so it shows the capacities the app owner can administer.
+ */
+export const onboarding: OnboardingConfig = {
+    listAccessibleCapacities: () => getRayfinClient().functions.listMyCapacities.invoke(undefined, { timeoutMs: 60_000 }),
+    eventstreamUrl: `https://app.fabric.microsoft.com/groups/${WORKSPACE_ID}/eventstreams/${EVENTSTREAM_ID}?experience=fabric-developer`,
+    eventstreamName: "ci-capacity-overview",
+    listedFor: "the app owner",
+};

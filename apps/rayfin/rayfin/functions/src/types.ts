@@ -21,4 +21,8 @@ export type AppFunctionsSchema = {
     input: { question: string };
     output: string;
   };
+  listMyCapacities: {
+    input: Record<string, never>;
+    output: { id: string; displayName: string; sku: string; region: string; state: string }[];
+  };
 };

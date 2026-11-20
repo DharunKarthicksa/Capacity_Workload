@@ -160,6 +160,12 @@ a.ci-card:hover, .ci-card.ci-click:hover { border-color: var(--ci-teal); color: 
 .ci-barrow { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 4px 6px; margin: 0 -6px; border-radius: 8px; cursor: pointer; color: inherit; font: inherit; }
 .ci-barrow:hover { background: var(--ci-subtle); }
 .ci-barrow[aria-pressed="true"] { background: var(--ci-teal-bg); }
+.ci-steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.5; }
+.ci-steps li::marker { color: var(--ci-teal); font-weight: 700; }
+.ci-pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--ci-teal); flex: 0 0 auto; animation: ci-pulse 1.4s ease-in-out infinite; }
+@keyframes ci-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .ci-pulse { animation: none; } }
+.ci-root code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; background: var(--ci-neutral); padding: 1px 5px; border-radius: 4px; }
 .ci-linkbtn { border: 0; background: transparent; padding: 0; color: var(--ci-teal); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .ci-linkbtn:hover { color: var(--ci-text); }
 .ci-grid-line { stroke: var(--ci-border); stroke-width: 1; }

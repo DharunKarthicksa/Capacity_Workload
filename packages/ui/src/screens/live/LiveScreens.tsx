@@ -9,6 +9,9 @@ import { usePolling } from "../../hooks/usePolling";
 import { Legend, LineChart, pointTime } from "../../components/LineChart";
 import type { ScreenKey } from "../sample/types";
 import { kpiIcons, type KpiIconName } from "../../shell/icons";
+import { AddCapacity, shortName, type OnboardingConfig } from "./AddCapacity";
+
+export { shortName };
 
 export const REFRESH_MS = 30_000;
 
@@ -23,6 +26,10 @@ export interface LiveProps {
   onAsk?: (question: string) => void;
   /** Opens another screen, optionally for another capacity. */
   onOpen?: (screen: ScreenKey, capacityId?: string) => void;
+  /** Enables the guided "add a capacity" flow. */
+  onboarding?: OnboardingConfig;
+  /** Asks the shell to re-read the monitored capacities (after one is added). */
+  onCapacitiesChanged?: () => void;
 }
 
 // ---------- helpers ----------
@@ -101,12 +108,6 @@ function Err({ what, error }: { what: string; error: Error | undefined }): React
 }
 
 const NEEDS_OPS = "This needs capacity operation events (per workspace and item). None have arrived yet. Switch to Sample data in the header to see the design.";
-
-/** Trial capacities get a long generated name (Trial-<timestamp>-<id>); show something readable instead. */
-export function shortName(name: string): string {
-  if (/^Trial-\d{8}T\d{6}Z-/.test(name)) return "Trial capacity";
-  return name.length > 32 ? `${name.slice(0, 30)}…` : name;
-}
 
 function capName(caps: CapacityRef[], id: string | undefined): string {
   const c = caps.find((x) => x.capacityId === id);
@@ -268,6 +269,7 @@ function AllCapacities(p: LiveProps): ReactElement {
         })}
       </div>
       {rows.length === 0 && !all.loading ? <NoData>No capacity has sent events yet.</NoData> : null}
+      {p.onboarding ? <AddCapacity config={p.onboarding} monitored={p.capacities} source={p.source} onConnected={p.onCapacitiesChanged} /> : null}
     </>
   );
 }
@@ -497,6 +499,7 @@ function AlertsSettings(p: LiveProps): ReactElement {
       </Card>
       <Card title="Monitored capacities" sub={`${p.capacities.length} sending events`}>
         {p.capacities.map((c) => <div className="ci-row" key={c.capacityId}><span title={c.displayName}>{shortName(c.displayName)}</span><span className="ci-muted">{c.sku} · {c.region}</span></div>)}
+        {p.onboarding ? <button type="button" className="ci-linkbtn" style={{ alignSelf: "flex-start" }} onClick={() => p.onOpen?.("all-capacities")}>Add a capacity ›</button> : null}
       </Card>
     </>
   );

@@ -3,6 +3,7 @@ import type { CapacityDataSource } from "../data/CapacityDataSource";
 import { usePolling } from "../hooks/usePolling";
 import { sampleScreens } from "../screens/sample";
 import type { ScreenKey } from "../screens/sample/types";
+import type { OnboardingConfig } from "../screens/live/AddCapacity";
 import { LiveScreen, ago, shortName } from "../screens/live/LiveScreens";
 import { ArrowUpRightIcon, DatabaseIcon, LogoIcon, MoonIcon, RefreshIcon, SendIcon, SparkIcon, SunIcon, navIcons } from "./icons";
 
@@ -88,10 +89,12 @@ export interface CapacityInsightsAppProps {
   subtitle?: string;
   /** Sends one question to the Fabric data agent and resolves to its answer. Without it the pane says it is not connected. */
   askAgent?: (question: string) => Promise<string>;
+  /** Enables the guided "add a capacity" flow on All capacities. */
+  onboarding?: OnboardingConfig;
 }
 
 /** The whole product UI: header, navigation, the current screen and the docked data agent. Both shells mount this. */
-export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", askAgent }: CapacityInsightsAppProps): ReactElement {
+export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", askAgent, onboarding }: CapacityInsightsAppProps): ReactElement {
   const [screen, setScreen] = useState<ScreenKey>(routeFromHash);
   const [mode, setModeState] = useState<Mode>(readMode);
   const [picked, setPicked] = useState<string>();
@@ -100,6 +103,7 @@ export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", 
   const [draft, setDraft] = useState("");
   const [askError, setAskError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [capsKey, setCapsKey] = useState(0);
   const [theme, setTheme] = useState<Theme>(readTheme);
   const dark = theme === "dark" || (theme === "auto" && autoIsDark());
   const toggleTheme = () => {
@@ -121,7 +125,7 @@ export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", 
   };
 
   const live = mode === "live";
-  const caps = usePolling(() => source.listCapacities(), [source, refreshKey], 5 * 60_000, live);
+  const caps = usePolling(() => source.listCapacities(), [source, refreshKey, capsKey], 5 * 60_000, live);
   const capacities = caps.data ?? [];
   const capacityId = picked ?? capacities[0]?.capacityId;
   const current = capacities.find((c) => c.capacityId === capacityId);
@@ -255,6 +259,7 @@ export function CapacityInsightsApp({ source, subtitle = "SE&I Customer Demos", 
               {caps.error ? <div className="ci-error" role="alert">Could not load capacities: {caps.error.message}</div> : null}
               <LiveScreen key={`${screen}-${refreshKey}`} screen={screen} source={source} capacities={capacities} capacityId={capacityId}
                 rangeMs={range.ms} rangeLabel={range.label} onAsk={ask}
+                onboarding={onboarding} onCapacitiesChanged={() => setCapsKey((k) => k + 1)}
                 onOpen={(next, id) => { if (id) setPicked(id); window.location.hash = `#/${next}`; }} />
             </>
           ) : <sample.Main />}

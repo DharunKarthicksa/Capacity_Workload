@@ -1,0 +1,78 @@
+{
+  "sources": [
+    {
+      "id": "b2a8aac8-bfbf-4463-a5b9-7886ebc9eef2",
+      "name": "capacity-operation",
+      "type": "FabricCapacityOperationEvents",
+      "properties": {
+        "eventScope": "Capacity",
+        "capacityId": "8c55b754-a1fe-49af-acbd-787ac7c9e2cd",
+        "includedEventTypes": [
+          "Microsoft.Fabric.CapacityOperationEvents.Operation"
+        ],
+        "filters": []
+      }
+    },
+    {
+      "id": "fbdce390-55f2-4310-9f8a-ac217a26e4f3",
+      "name": "ci-capacity-overview",
+      "type": "FabricCapacityOverviewEvents",
+      "properties": {
+        "eventScope": "Capacity",
+        "capacityId": "8c55b754-a1fe-49af-acbd-787ac7c9e2cd",
+        "includedEventTypes": [
+          "Microsoft.Fabric.Capacity.State",
+          "Microsoft.Fabric.Capacity.Summary",
+          "Microsoft.Fabric.Capacity.OnDemandSummary"
+        ],
+        "filters": []
+      }
+    }
+  ],
+  "destinations": [
+    {
+      "id": "82e86f3f-6206-499c-b790-f0b8cee1c181",
+      "name": "Eventhouse",
+      "type": "Eventhouse",
+      "properties": {
+        "dataIngestionMode": "DirectIngestion",
+        "workspaceId": "415f790e-a590-4b59-b30a-c3a70a48de1e",
+        "itemId": "32dbe0c2-14e8-4199-8be2-f9e99ccdcfc1",
+        "tableName": "",
+        "connectionName": "ci-capacity-events_nijpmt",
+        "mappingRuleName": "RawCapacityEvents_mapping_1"
+      },
+      "inputNodes": [
+        {
+          "name": "ci-capacity-events-stream"
+        }
+      ],
+      "inputSchemas": [
+        {
+          "name": "ci-capacity-events-stream",
+          "schema": {
+            "columns": []
+          }
+        }
+      ]
+    }
+  ],
+  "streams": [
+    {
+      "id": "5f720cb9-19e0-491f-946e-184a6c3646ad",
+      "name": "ci-capacity-events-stream",
+      "type": "DefaultStream",
+      "properties": {},
+      "inputNodes": [
+        {
+          "name": "capacity-operation"
+        },
+        {
+          "name": "ci-capacity-overview"
+        }
+      ]
+    }
+  ],
+  "operators": [],
+  "compatibilityLevel": "1.1"
+}

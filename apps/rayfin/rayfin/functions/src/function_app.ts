@@ -11,6 +11,39 @@ const DATA_AGENT_ID = '5aae0a2f-0406-4038-90bb-bb033277d2c8';
 const MCP_URL = `https://api.fabric.microsoft.com/v1/mcp/workspaces/${WORKSPACE_ID}/dataagents/${DATA_AGENT_ID}/agent`;
 const MAX_QUESTION_CHARS = 1000;
 
+/** A capacity the app identity can administer or contribute to (Fabric REST: Capacities - List Capacities). */
+interface AccessibleCapacity {
+  id: string;
+  displayName: string;
+  sku: string;
+  region: string;
+  state: string;
+}
+
+/**
+ * Lists the capacities the app identity can access, so the app can show which ones are not monitored yet.
+ * Today the app identity is the owner of the Fabric app item, so this is the owner's list, not the viewer's.
+ */
+udf.func(
+  'listMyCapacities',
+  async (ctx: RayfinContext<Record<string, any>, AudienceType.Fabric>): Promise<AccessibleCapacity[]> => {
+    const out: AccessibleCapacity[] = [];
+    let url: string | undefined = 'https://api.fabric.microsoft.com/v1/capacities';
+    for (let page = 0; url && page < 20; page++) {
+      const response: Response = await fetch(url, { headers: { Authorization: `Bearer ${ctx.Tokens.Fabric}` } });
+      if (!response.ok) throw new Error(`Listing capacities failed with HTTP ${response.status}`);
+      const body = (await response.json()) as { value?: AccessibleCapacity[]; continuationUri?: string };
+      for (const c of body.value ?? []) {
+        out.push({ id: String(c.id).toLowerCase(), displayName: c.displayName, sku: c.sku, region: c.region, state: c.state });
+      }
+      url = body.continuationUri;
+    }
+    console.log(`listMyCapacities returned ${out.length} capacities`);
+    return out;
+  },
+  [],
+);
+
 interface RpcMessage {
   id?: number;
   result?: Record<string, unknown>;

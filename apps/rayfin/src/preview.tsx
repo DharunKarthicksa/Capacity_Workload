@@ -52,5 +52,16 @@ const fakeAgent = (question: string): Promise<string> =>
 A closing line.`), 1200));
 
 createRoot(document.getElementById("root")!).render(
-  <CapacityInsightsApp source={synthetic} subtitle="Local preview · synthetic data" askAgent={fakeAgent} />,
+  <CapacityInsightsApp source={synthetic} subtitle="Local preview · synthetic data" askAgent={fakeAgent}
+    onboarding={{
+      listAccessibleCapacities: async () => [
+        { id: cap.capacityId, displayName: cap.displayName, sku: "F64", region: "Central US", state: "Active" },
+        { id: "00000000-0000-0000-0000-000000000002", displayName: "fabricf64new", sku: "F64", region: "West US", state: "Active" },
+        { id: "00000000-0000-0000-0000-000000000003", displayName: "Trial-20261116T084937Z-am4qWabcdefghijk", sku: "FTL64", region: "Central US", state: "Inactive" },
+        { id: "00000000-0000-0000-0000-000000000004", displayName: "Premium Per User - Reserved", sku: "PP3", region: "West US", state: "Active" },
+      ],
+      eventstreamUrl: "https://app.fabric.microsoft.com/",
+      eventstreamName: "ci-capacity-overview",
+      listedFor: "the app owner",
+    }} />,
 );
