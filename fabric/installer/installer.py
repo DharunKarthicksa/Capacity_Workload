@@ -98,6 +98,34 @@ def ensure(kind, name, definition=None, fmt=None):
 
 TARGET = {}
 
+# 0. Where are we? -------------------------------------------------------------------------------
+# Every tenant and capacity is different, so look before creating anything.
+WS_NAME = ""
+try:
+    ws_info = call("GET", f"workspaces/{WS}")
+    WS_NAME = ws_info.get("displayName", "")
+    cap_id = str(ws_info.get("capacityId") or "")
+    if not cap_id:
+        raise RuntimeError(f"Workspace '{WS_NAME}' is not on a Fabric capacity. Assign one in Workspace settings, then run again.")
+    cap = None
+    try:  # only lists capacities you administer or contribute to; that is fine, the SKU is just for advice
+        cap = next((c for c in listing("capacities") if str(c.get("id", "")).lower() == cap_id.lower()), None)
+    except Exception:
+        pass
+    sku = str((cap or {}).get("sku", "")).upper()
+    log("Workspace", "ok", f"'{WS_NAME}' on capacity {(cap or {}).get('displayName', cap_id)}"
+        + (f" ({sku}, {cap.get('region', '?')})" if cap else " (SKU not visible to you)"))
+    if INSTALL_DATA_AGENT and sku.startswith("FT"):  # noqa: F821
+        INSTALL_DATA_AGENT = False
+        log("Data agent", "skipped", "this is a trial capacity; data agents need a paid F2 or larger")
+    if sku in ("F2", "F4"):
+        print("   note: an Eventhouse and an Eventstream run all the time. On a capacity this small they can use a large "
+              "share of it. Remove the items when you finish testing.")
+except RuntimeError:
+    raise
+except Exception as e:
+    log("Workspace", "skipped", f"could not read workspace details: {str(e)[:200]}")
+
 # 1. Folder ---------------------------------------------------------------------------------------
 try:
     if FOLDER:  # noqa: F821
@@ -194,7 +222,8 @@ if INSTALL_DATA_AGENT:  # noqa: F821
 # 8. Summary ---------------------------------------------------------------------------------------
 RESULT["target"] = TARGET
 print("\n==== Copy this block into apps/rayfin/target.json if you will deploy the app ====")
-print(json.dumps({"workspaceId": WS, "semanticModelId": TARGET.get("semanticModelId"), "dataAgentId": TARGET.get("dataAgentId"),
+print(json.dumps({"workspaceId": WS, "workspaceName": WS_NAME, "semanticModelId": TARGET.get("semanticModelId"),
+                  "dataAgentId": TARGET.get("dataAgentId") or "",
                   "eventstreamId": "", "eventstreamName": PREFIX + "capacity-overview"}, indent=2))  # noqa: F821
 print(f"""
 ==== What is left to do by hand ====

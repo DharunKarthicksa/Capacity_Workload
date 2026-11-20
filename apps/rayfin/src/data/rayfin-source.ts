@@ -26,6 +26,8 @@ export const askDataAgent = (question: string): Promise<string> =>
     getRayfinClient().functions.askDataAgent.invoke({ question }, { timeoutMs: 240_000 });
 
 /** The Eventstream that feeds ci-eventhouse (ids are not secrets). New capacities are added to it as sources. */
+/** Shown next to the product name. scripts/set_app_target.py changes it for another workspace. */
+export const WORKSPACE_LABEL = "SE&I Customer Demos";
 const WORKSPACE_ID = "415f790e-a590-4b59-b30a-c3a70a48de1e";
 const EVENTSTREAM_ID = "5eb5b1a1-cc6e-42c0-b246-053bb35e7539";
 

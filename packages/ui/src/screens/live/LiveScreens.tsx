@@ -486,7 +486,7 @@ function AlertsSettings(p: LiveProps): ReactElement {
         <div className="ci-grid">
           {item("Capacity events", "ci-capacity-overview · Eventstream", latest ? flowing : undefined, latest ? (flowing ? "Running" : "Stale") : "Unknown",
             latest ? `Last event ${ago(new Date(latest))} · ${p.capacities.length} capacity` : "No events seen")}
-          {item("Ingestion", "ci-eventhouse · KQL database", latest ? flowing : undefined, latest ? (flowing ? "Healthy" : "Check") : "Unknown", "Measured event to queryable: 43 s p95 (docs/latency.md)")}
+          {item("Ingestion", "ci-eventhouse · KQL database", latest ? flowing : undefined, latest ? (flowing ? "Healthy" : "Check") : "Unknown", "Rows are usually queryable within a minute of the event")}
           {item("Model scan", "ci-bpa-scan · Notebook", scan ? scanFresh : undefined, scan ? (scanFresh ? "Healthy" : "Stale") : "Unknown",
             scan ? `Last scan ${new Date(scan).toLocaleString()} · daily` : "No scan found")}
           {item("Anomaly baseline", "ci-baseline-refresh · Notebook", undefined, "Scheduled", "Hourly. Run status is not exposed to the app yet.")}

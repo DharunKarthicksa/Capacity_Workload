@@ -20,6 +20,37 @@ There are two parts. Part A is enough to see live capacity data. Part B adds the
 - The data agent needs a **paid F2 or larger** capacity and the data agent tenant settings. On a trial capacity, set `INSTALL_DATA_AGENT = False` in the notebook.
 - For Part B, the **Fabric Apps** tenant setting must be on for you.
 
+## If you are in a different tenant
+
+This is built to work in any tenant. A few things differ from tenant to tenant, so check them first.
+
+**Nothing connects back to the original environment.** The notebook carries no IDs, addresses or keys from the tenant it was built in. Everything it creates lives in your workspace, and your data stays in your tenant.
+
+**Tenant settings in your tenant** (a Fabric admin sets these; if one is off, that step fails and the rest still works):
+
+| Needed for | Setting |
+| --- | --- |
+| Everything | Users can create Fabric items |
+| Capacity events (the Eventstream) | Real-Time hub Fabric events must be available to you |
+| The data agent | The Fabric data agent and Copilot settings, including cross-geo processing where your region needs it |
+| Model health (the BPA scan) | XMLA endpoint at least Read on the capacity that holds your semantic models |
+| Part B, the app | Fabric Apps |
+
+This list comes from Microsoft's documentation and has not been checked in a second tenant yet. If a step fails with a permission or "feature not enabled" message, it is most likely one of these.
+
+**Your capacity will not match ours.** The notebook reads your workspace's capacity first and adapts:
+
+| Your capacity | What happens |
+| --- | --- |
+| Trial (FT SKUs) | The data agent is skipped automatically. Everything else installs |
+| Small (F2, F4) | It installs, with a warning: the Eventhouse and Eventstream run all the time and can take a large share of a small capacity. Remove them after testing |
+| Premium (P SKUs) with autoscale | CU % can read wrong, because autoscale adds capacity the events do not report |
+| Not on a capacity | The notebook stops with a message before creating anything |
+
+**The capacity you monitor can be a different one** from the capacity your workspace runs on. You choose it when you add the Eventstream sources, and you must be an admin of it.
+
+**Signing in for Part B:** if your account belongs to more than one tenant, name the tenant so the app deploys to the right one: `npx rayfin login --tenant <your tenant id>`.
+
 ## Part A: data items
 
 1. Get the file `fabric/installer/CapacityInsights_Install.ipynb` (from this repository, or sent to you directly). It contains every definition it needs; it does not download anything.
@@ -59,6 +90,7 @@ You need this repository on your machine.
    ```json
    {
      "workspaceId": "<your workspace id>",
+     "workspaceName": "<shown next to the app name>",
      "semanticModelId": "<from the notebook>",
      "dataAgentId": "<from the notebook, or empty>",
      "eventstreamId": "<from the Eventstream address>",
@@ -84,7 +116,7 @@ You need this repository on your machine.
 
 5. Open the address, sign in, and switch between **Live** and **Sample** in the header.
 
-Step 3 changes three files locally (`rayfin.yml`, `function_app.ts`, `rayfin-source.ts`). Do not commit them. To undo: `git checkout -- apps/rayfin`.
+Step 3 changes three files locally (`rayfin.yml`, `function_app.ts`, `rayfin-source.ts`). It also removes the original environment's app address from the sign-in redirect list, so only your own app can complete a sign-in. Do not commit these changes. To undo: `git checkout -- apps/rayfin`.
 
 ## What to test
 
@@ -113,4 +145,5 @@ Delete these from your workspace (names shown with the default prefix): the app 
 
 - Rebuild the installer after changing anything under `fabric/`: `python scripts/build_installer.py`.
 - The install logic is `fabric/installer/installer.py`. The notebook is generated; do not edit it by hand.
-- The installer replaces our workspace ID, cluster address and database ID with the target's. It carries no tokens or keys.
+- The build swaps our workspace ID, cluster address and database ID for neutral tokens, and fails if any are left. The installer fills in the target's values. The notebook carries no identifiers, tokens or keys of ours.
+- `scripts/set_app_target.py` is how the app is pointed at another workspace. The repository's own values are ours; never commit a retargeted copy.
