@@ -16,6 +16,10 @@ See `Capacity Insights · 5-phase delivery plan.md` for the full plan and `CLAUD
 | `scripts/` | `fab` / `rayfin` wrappers, one per phase step |
 | `docs/` | Architecture, decisions, publishing matrix, latency and cost measurements |
 
+## Try it in your own workspace
+
+See [docs/deploy-to-another-workspace.md](docs/deploy-to-another-workspace.md). In short: import `fabric/installer/CapacityInsights_Install.ipynb` into a Fabric workspace and select Run all for the data items, then follow the same page to deploy the app.
+
 ## Status
 
-Phase 1 (prerequisites and foundation) in progress. See `docs/phase-1-checklist.md`.
+Phases 1 to 3 are built: the data plane, the Fabric App with eight screens, and the data agent. Phase 4 (workload) has not started.
