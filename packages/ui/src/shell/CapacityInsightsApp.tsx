@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactElement, type R
 import type { CapacityDataSource, LiveSummary } from "../data/CapacityDataSource";
 import { usePolling } from "../hooks/usePolling";
 import { sampleScreens } from "../screens/sample";
+import { extraSampleScreens } from "../screens/sample/extra";
 import type { ScreenKey } from "../screens/sample/types";
 import type { OnboardingConfig } from "../screens/live/AddCapacity";
 import { LiveScreen, ago, shortName } from "../screens/live/LiveScreens";
@@ -15,6 +16,7 @@ const NAV: { key: ScreenKey; label: string; short: string }[] = [
   { key: "anomalies", label: "Anomalies & root cause", short: "Anomalies" },
   { key: "throttling", label: "Throttling & headroom", short: "Throttling" },
   { key: "workspaces", label: "Workspaces & items", short: "Workspaces" },
+  { key: "chargeback", label: "Chargeback", short: "Chargeback" },
   { key: "model-health", label: "Model health", short: "Models" },
   { key: "rebalance", label: "Rebalance", short: "Rebalance" },
   { key: "alerts-settings", label: "Alerts & settings", short: "Alerts" },
@@ -159,7 +161,7 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
   const heartbeat = usePolling(
     () => (capacityId ? source.getLiveSummary(capacityId) : Promise.resolve(undefined)), [source, capacityId, refreshKey], 30_000, live);
   const range = LIVE_RANGES[rangeIdx] ?? LIVE_RANGES[0]!;
-  const sample = sampleScreens.find((s) => s.key === screen) ?? sampleScreens[0]!;
+  const sample = sampleScreens.find((s) => s.key === screen) ?? extraSampleScreens.find((s) => s.key === screen) ?? sampleScreens[0]!;
   const title = NAV.find((n) => n.key === screen)?.label ?? "Overview";
 
   const liveAge = heartbeat.data ? Date.now() - new Date(heartbeat.data.asOf).getTime() : undefined;

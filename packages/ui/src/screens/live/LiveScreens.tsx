@@ -5,6 +5,7 @@
 import { useState, type ReactElement, type ReactNode } from "react";
 import type { BpaFinding, CapacityDataSource, CapacityRef, LiveSummary, SeriesPoint } from "../../data/CapacityDataSource";
 import { ANOMALY_THRESHOLD, HOURLY_ABOVE_MS } from "../../data/dax";
+import { CU_HOUR_USD, capacityCost, downloadCsv, hoursElapsedThisMonth, usd, usdFull } from "../../data/cost";
 import { usePolling } from "../../hooks/usePolling";
 import { Legend, LineChart, pointTime } from "../../components/LineChart";
 import type { ScreenKey } from "../sample/types";
@@ -187,6 +188,8 @@ function Overview(p: LiveProps): ReactElement {
   const open = pts.filter((x) => (x.anomalyScore ?? 0) > ANOMALY_THRESHOLD).length;
   const win = s?.interactiveDelayThresholdPercent ?? 0;
   const tone = riskTone(win);
+  const cap = p.capacities.find((c) => c.capacityId === p.capacityId);
+  const cost = cap ? capacityCost(cap.sku) : undefined;
 
   return (
     <>
@@ -215,6 +218,7 @@ function Overview(p: LiveProps): ReactElement {
         <Kpi icon="split" label="Interactive / background" value={s ? `${pct(s.interactivePercent)} · ${pct(s.backgroundPercent)}` : "-"} sub="Share of capacity now" />
         <Kpi icon="alert" label="Open anomalies" value={String(open)} sub={`Score above ${ANOMALY_THRESHOLD}, ${p.rangeLabel.toLowerCase()}`} tone={open > 0 ? "danger" : undefined}
           href="#/anomalies" go="Open anomalies" />
+        {cost ? <Kpi icon="clock" label="Est. cost this month" value={usd(cost.mtdUsd)} sub={`${cap!.sku} at list rate · projected ${usd(cost.projectedMonthUsd)}`} href="#/chargeback" go="Open chargeback" /> : null}
       </div>
       <Card title={`CU utilization, ${p.rangeLabel.toLowerCase()}`}
         sub={hourly ? "CU as a share of the capacity, hourly average" : "CU as a share of the capacity, per 30-second timepoint"}>
@@ -505,6 +509,97 @@ function AlertsSettings(p: LiveProps): ReactElement {
   );
 }
 
+function readBudget(capacityId: string | undefined): number | undefined {
+  if (!capacityId) return undefined;
+  try {
+    const n = Number(window.localStorage.getItem(`ci-budget-${capacityId}`));
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  } catch { return undefined; }
+}
+
+/** Per-capacity monthly budget with 80% / 100% warnings. Saved in the viewer's browser until a shared data layer is chosen. */
+function BudgetCard({ capacityId, mtdUsd, projectedUsd }: { capacityId: string | undefined; mtdUsd: number; projectedUsd: number }): ReactElement {
+  const [budget, setBudget] = useState<number | undefined>(() => readBudget(capacityId));
+  const [draft, setDraft] = useState(budget ? String(budget) : "");
+  const clear = () => {
+    setBudget(undefined);
+    try { if (capacityId) window.localStorage.removeItem(`ci-budget-${capacityId}`); } catch { /* nothing to clear */ }
+  };
+  const save = () => {
+    const n = Number(draft);
+    if (Number.isFinite(n) && n > 0) {
+      setBudget(n);
+      try { window.localStorage.setItem(`ci-budget-${capacityId}`, String(n)); } catch { /* kept for this visit only */ }
+    } else { clear(); }
+  };
+  const used = budget ? (mtdUsd / budget) * 100 : undefined;
+  const proj = budget ? (projectedUsd / budget) * 100 : undefined;
+  const tone: Tone | undefined = used === undefined ? undefined : used >= 100 ? "danger" : used >= 80 ? "warn" : "ok";
+  const barColor = tone === "danger" ? "var(--ci-danger)" : tone === "warn" ? "var(--ci-warn)" : "var(--ci-success)";
+  return (
+    <Card title="Monthly budget" sub="Warns at 80% and 100%. Saved in this browser until a shared data layer is chosen.">
+      <div className="ci-row" style={{ alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <label htmlFor="ci-budget-input" style={{ fontSize: 13 }}>Monthly budget (USD)</label>
+        <input id="ci-budget-input" className="ci-select" inputMode="decimal" style={{ maxWidth: 160 }} value={draft}
+          placeholder="e.g. 9000" onChange={(e) => setDraft(e.target.value.replace(/[^\d.]/g, ""))}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
+        <button type="button" className="ci-btn" onClick={save}>Save</button>
+        {budget ? <button type="button" className="ci-linkbtn" onClick={() => { setDraft(""); clear(); }}>Clear</button> : null}
+      </div>
+      {budget && used !== undefined && proj !== undefined ? (
+        <>
+          <div className="ci-row" style={{ marginTop: 8 }}><span>{usdFull(mtdUsd)} of {usdFull(budget)} used</span><strong>{used.toFixed(0)}%</strong></div>
+          <div className="ci-track"><i style={{ width: `${Math.min(100, used)}%`, background: barColor }} /></div>
+          <span className={`ci-pill ${tone}`} style={{ alignSelf: "flex-start", marginTop: 8 }}>
+            {used >= 100 ? "Over budget" : used >= 80 ? "Near budget" : "On track"} · projected {proj.toFixed(0)}% of budget
+          </span>
+        </>
+      ) : <span className="ci-kpi-sub">Set a monthly budget to track spend against it.</span>}
+    </Card>
+  );
+}
+
+function Chargeback(p: LiveProps): ReactElement {
+  const cap = p.capacities.find((c) => c.capacityId === p.capacityId);
+  const cost = cap ? capacityCost(cap.sku) : undefined;
+  const hrs = Math.round(hoursElapsedThisMonth());
+  const exportSummary = () => {
+    if (!cap || !cost) return;
+    downloadCsv(`chargeback-${shortName(cap.displayName)}-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ["Capacity", "SKU", "Region", "Rate USD/hour", "Hours this month", "Cost to date USD", "Projected month USD"],
+      [cap.displayName, cap.sku, cap.region, cost.hourlyUsd.toFixed(2), hrs, cost.mtdUsd.toFixed(2), cost.projectedMonthUsd.toFixed(2)],
+    ]);
+  };
+  return (
+    <>
+      <Title title="Chargeback" sub={`What ${capName(p.capacities, p.capacityId)} costs, and how to split it by team`} />
+      {!p.capacityId ? <NoData>Select a capacity to estimate its cost.</NoData> : !cost ? (
+        <NoData>The SKU for this capacity ({cap?.sku || "unknown"}) is not in the price table, so its cost cannot be estimated. Add it to data/cost.ts.</NoData>
+      ) : (
+        <>
+          <div className="ci-grid">
+            <Kpi icon="pulse" label="Est. cost this month" value={usd(cost.mtdUsd)} sub={`${cap!.sku} · ${hrs} h at $${CU_HOUR_USD}/CU-hour list`} />
+            <Kpi icon="gauge" label="Projected this month" value={usd(cost.projectedMonthUsd)} sub="Whole month at this SKU" />
+            <Kpi icon="clock" label="Daily rate" value={usd(cost.hourlyUsd * 24)} sub={`${usd(cost.hourlyUsd)} per hour`} />
+          </div>
+          <BudgetCard key={p.capacityId} capacityId={p.capacityId} mtdUsd={cost.mtdUsd} projectedUsd={cost.projectedMonthUsd} />
+          <Card title="Cost by workspace and cost centre" sub="Share the bill across the teams that use the capacity">
+            <NoData>{NEEDS_OPS}</NoData>
+          </Card>
+          <Card title="How this is estimated">
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55 }}>
+              Fabric bills a capacity by its SKU, so cost follows the SKU, not usage. This uses the list
+              pay-as-you-go rate of ${CU_HOUR_USD} per CU-hour ({cap!.sku} = {usd(cost.hourlyUsd)}/hour) times the hours
+              elapsed this month. Reserved and regional pricing differ, and a paused capacity is not billed — treat it as an estimate.
+            </p>
+            <button type="button" className="ci-btn" style={{ alignSelf: "flex-start" }} onClick={exportSummary}>Export summary (CSV)</button>
+          </Card>
+        </>
+      )}
+    </>
+  );
+}
+
 function OpsOnly({ title, sub }: { title: string; sub: string }): ReactElement {
   return <><Title title={title} sub={sub} /><NoData>{NEEDS_OPS}</NoData></>;
 }
@@ -518,6 +613,7 @@ export function LiveScreen({ screen, ...p }: LiveProps & { screen: ScreenKey }):
     case "model-health": return <ModelHealth {...p} />;
     case "alerts-settings": return <AlertsSettings {...p} />;
     case "workspaces": return <OpsOnly title="Workspaces & items" sub="Who uses the capacity, what they run, and what changed" />;
+    case "chargeback": return <Chargeback {...p} />;
     case "rebalance": return (
       <>
         <Title title="Rebalance" sub="Moves that even out load across capacities in the same region · proposals only, a person approves" />
