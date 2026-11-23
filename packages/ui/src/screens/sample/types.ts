@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 export type ScreenKey =
   | "all-capacities" | "overview" | "anomalies" | "throttling"
-  | "workspaces" | "model-health" | "rebalance" | "alerts-settings";
+  | "workspaces" | "chargeback" | "model-health" | "rebalance" | "alerts-settings";
 
 /** The sample data-agent conversation shown for a screen in Sample mode. */
 export interface SampleAgent {

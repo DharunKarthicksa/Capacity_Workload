@@ -22,6 +22,7 @@ export const navIcons: Record<ScreenKey, ReactElement> = {
   anomalies: <Icon><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></Icon>,
   throttling: <Icon><path d="M4 18a8 8 0 1 1 16 0" /><path d="M12 18l4-6" /></Icon>,
   workspaces: <Icon><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></Icon>,
+  chargeback: <Icon><path d="M6 3h12a1 1 0 0 1 1 1v17l-3.2-2-2.4 2-2.4-2-2.4 2L4 21V4a1 1 0 0 1 1-1z" /><path d="M9 8h6M9 12h4" /></Icon>,
   "model-health": <Icon><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" /></Icon>,
   rebalance: <Icon><path d="M4 8h13l-3-3M20 16H7l3 3" /></Icon>,
   "alerts-settings": <Icon><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2z" /><path d="M10 20a2 2 0 0 0 4 0" /></Icon>,
