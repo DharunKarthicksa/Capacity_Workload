@@ -53,3 +53,5 @@ export const SparkIcon = (): ReactElement => (
     <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15z" />
   </Icon>
 );
+/** Collapse the data-agent pane to the right edge. */
+export const ChevronRightIcon = (): ReactElement => <Icon><path d="M9 6l6 6-6 6" /></Icon>;

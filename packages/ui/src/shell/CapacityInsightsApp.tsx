@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
-import type { CapacityDataSource } from "../data/CapacityDataSource";
+import type { CapacityDataSource, LiveSummary } from "../data/CapacityDataSource";
 import { usePolling } from "../hooks/usePolling";
 import { sampleScreens } from "../screens/sample";
 import type { ScreenKey } from "../screens/sample/types";
 import type { OnboardingConfig } from "../screens/live/AddCapacity";
 import { LiveScreen, ago, shortName } from "../screens/live/LiveScreens";
-import { ArrowUpRightIcon, DatabaseIcon, LogoIcon, MoonIcon, RefreshIcon, SendIcon, SparkIcon, SunIcon, navIcons } from "./icons";
+import { ArrowUpRightIcon, ChevronRightIcon, DatabaseIcon, LogoIcon, MoonIcon, RefreshIcon, SendIcon, SparkIcon, SunIcon, navIcons } from "./icons";
 
 type Mode = "live" | "sample";
 
@@ -61,6 +61,28 @@ function readMode(): Mode {
   try { return window.localStorage.getItem("ci-mode") === "sample" ? "sample" : "live"; } catch { return "live"; }
 }
 
+function readChatOpen(): boolean {
+  try { return window.localStorage.getItem("ci-chat") !== "closed"; } catch { return true; }
+}
+
+type BadgeTone = "ok" | "warn" | "danger" | "";
+/**
+ * A short operating state for the header, from the latest summary. State events have not arrived,
+ * so this reads the throttling windows and CU, not Capacity.State (Active / Paused / Overloaded).
+ */
+function healthBadge(s: LiveSummary | undefined): { label: string; tone: BadgeTone } {
+  if (!s) return { label: "No data yet", tone: "" };
+  const cu = Math.round(s.cuPercent);
+  const bgRej = s.backgroundRejectionThresholdPercent ?? 0;
+  const intRej = s.interactiveRejectionThresholdPercent ?? 0;
+  const delay = s.interactiveDelayThresholdPercent ?? 0;
+  if (bgRej >= 100 || s.throttling === "Rejecting") return { label: `Rejecting jobs · ${cu}% CU`, tone: "danger" };
+  if (intRej >= 100 || s.throttling === "Throttled") return { label: `Throttling · ${cu}% CU`, tone: "danger" };
+  if (delay >= 100 || s.throttling === "Overage") return { label: `Delaying jobs · ${cu}% CU`, tone: "warn" };
+  if (cu >= 90) return { label: `Busy · ${cu}% CU`, tone: "warn" };
+  return { label: `Healthy · ${cu}% CU`, tone: "ok" };
+}
+
 interface Turn { id: number; question: string; answer?: string; error?: string; pending: boolean }
 
 /** Renders agent text: blank-line paragraphs, "- " bullets, and **bold** markers removed. */
@@ -111,6 +133,11 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
     setTheme(next);
     try { window.localStorage.setItem("ci-theme", next); } catch { /* the choice then lasts for this visit */ }
   };
+  const [chatOpen, setChatOpen] = useState(readChatOpen);
+  const setChat = (open: boolean) => {
+    setChatOpen(open);
+    try { window.localStorage.setItem("ci-chat", open ? "open" : "closed"); } catch { /* the choice then lasts for this visit */ }
+  };
 
   useEffect(() => {
     const onHash = () => setScreen(routeFromHash());
@@ -137,6 +164,9 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
 
   const liveAge = heartbeat.data ? Date.now() - new Date(heartbeat.data.asOf).getTime() : undefined;
   const liveOk = liveAge !== undefined && liveAge < 120_000;
+  // Always-visible operating state for the current capacity. Hidden on All capacities (no single capacity there).
+  const badge = live ? healthBadge(heartbeat.data) : { label: "Healthy · 38% CU", tone: "ok" as BadgeTone };
+  const showBadge = screen !== "all-capacities" && (live ? Boolean(heartbeat.data) : true);
   const context = live
     ? `Looking at: ${title}${current ? ` · ${shortName(current.displayName)}` : ""} · ${range.label.toLowerCase()}`
     : sample.agent.context;
@@ -212,6 +242,15 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
             )}
           </div>
         ) : null}
+        {screen !== "all-capacities" ? (
+          <div className="ci-field">
+            <label htmlFor="ci-workspace">Workspace</label>
+            <select id="ci-workspace" className="ci-select" value="" disabled
+              title="Filtering by workspace needs per-operation events. It activates when this capacity starts sending them.">
+              <option value="">All workspaces</option>
+            </select>
+          </div>
+        ) : null}
         <div className="ci-field">
           <label htmlFor="ci-range">Time range</label>
           {live ? (
@@ -223,6 +262,11 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {showBadge ? (
+            <span className={`ci-pill ${badge.tone}`} title="Operating state, from the latest summary">
+              <span className="ci-dot" />{badge.label}
+            </span>
+          ) : null}
           {live ? (
             <span className={`ci-pill ${liveOk ? "ok" : heartbeat.data ? "warn" : ""}`}>
               <span className="ci-dot" />
@@ -264,6 +308,7 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
           ) : <sample.Main />}
         </main>
 
+        {chatOpen ? (
         <aside className="ci-agent" aria-label="Data agent">
           <div className="ci-agent-head">
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -272,6 +317,7 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
                 <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em" }}>Ask Capacity Insights</span>
                 <span style={{ fontSize: 12, color: "var(--ci-muted)" }}>Your capacity data, in conversation</span>
               </div>
+              <button type="button" className="ci-agent-collapse" aria-label="Hide the data agent" title="Hide" onClick={() => setChat(false)}><ChevronRightIcon /></button>
             </div>
             <div className="ci-agent-status">
               <span className={`ci-dot ${agentOn ? "on" : ""}`} />
@@ -330,6 +376,13 @@ export function CapacityInsightsApp({ source, subtitle = "", askAgent, onboardin
             <span className="ci-agent-fine">Answers use the app owner's access to the data. AI can make mistakes, so check the numbers.</span>
           </form>
         </aside>
+        ) : (
+          <aside className="ci-agent-rail" aria-label="Data agent">
+            <button type="button" onClick={() => setChat(true)} aria-label="Show the data agent" title="Ask Capacity Insights">
+              <SparkIcon /><span className="ci-rail-label">Ask</span>
+            </button>
+          </aside>
+        )}
       </div>
     </div>
   );
