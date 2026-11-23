@@ -97,6 +97,9 @@
   .ci-nav a, .ci-nav-btn { flex: 1 1 72px; }
   .ci-nav-rule, .ci-nav-grow { display: none; }
   .ci-agent { max-width: none; border: 0; border-top: 1px solid var(--ci-border); }
+  .ci-agent-rail { flex: 1 1 100%; border: 0; border-top: 1px solid var(--ci-border); justify-content: flex-start; padding: 10px 16px; }
+  .ci-agent-rail button { flex-direction: row; }
+  .ci-rail-label { writing-mode: horizontal-tb; transform: none; }
 }
 /* Wide screens: the top bar, navigation and data agent stay put; only the dashboard and the conversation scroll. */
 @media (min-width: 901px) {
@@ -210,3 +213,11 @@ a.ci-card:hover, .ci-card.ci-click:hover { border-color: var(--ci-teal); color: 
 .ci-send:disabled { opacity: 0.5; cursor: default; }
 .ci-agent-fine { font-size: 11px; color: var(--ci-muted); text-align: center; }
 .ci-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Collapsible data agent */
+.ci-agent-collapse { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--ci-border); border-radius: 8px; background: var(--ci-surface); color: var(--ci-muted); cursor: pointer; flex: 0 0 auto; }
+.ci-agent-collapse:hover { color: var(--ci-text); border-color: var(--ci-teal); }
+.ci-agent-rail { flex: 0 0 52px; background: var(--ci-surface); border-left: 1px solid var(--ci-border); display: flex; align-items: flex-start; justify-content: center; padding: 16px 0; }
+.ci-agent-rail button { display: inline-flex; flex-direction: column; align-items: center; gap: 12px; border: 0; background: transparent; color: var(--ci-teal); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; padding: 10px 4px; border-radius: 8px; }
+.ci-agent-rail button:hover { background: var(--ci-teal-bg); }
+.ci-rail-label { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.1em; text-transform: uppercase; }
